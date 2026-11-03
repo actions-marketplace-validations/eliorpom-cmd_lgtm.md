@@ -8,6 +8,7 @@
 // The shared toolkit is ported whole; widgets not yet ported will use the rest.
 #![allow(dead_code)]
 
+mod brand;
 mod collect;
 mod data;
 mod dates;

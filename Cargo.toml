@@ -7,6 +7,7 @@ description = "Animated pixel-art widgets for GitHub profile READMEs, drawn from
 repository = "https://github.com/eliorpom-cmd/lgtm.md"
 
 [dependencies]
+ab_glyph = "0.2.32"
 gif = "0.14.2"
 image = { version = "0.25.10", default-features = false, features = ["jpeg", "png"] }
 indexmap = { version = "2.14.2", features = ["serde"] }

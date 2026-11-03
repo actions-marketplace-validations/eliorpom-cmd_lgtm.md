@@ -50,8 +50,9 @@ pub fn save(frames: &[Canvas], name: &str, options: Save) -> String {
     }
     if !out.raw_only {
         std::fs::create_dir_all(&out.dir).expect("cannot create output directory");
-        write_gif(&out.dir.join(format!("{name}.gif")), frames, options.scale, options.duration);
-        write_png(&out.dir.join(format!("{name}.png")), &frames[still], options.scale);
+        let band = crate::brand::band(name, frames[0].width as usize * options.scale);
+        write_gif(&out.dir.join(format!("{name}.gif")), frames, options.scale, options.duration, &band);
+        write_png(&out.dir.join(format!("{name}.png")), &frames[still], options.scale, &band);
     }
     name.to_string()
 }
@@ -72,30 +73,35 @@ fn write_raw(path: &PathBuf, frames: &[Canvas], duration: u32, still: usize) {
     }
 }
 
-fn write_png(path: &PathBuf, frame: &Canvas, scale: usize) {
-    let (w, h) = (frame.width as usize * scale, frame.height as usize * scale);
+fn write_png(path: &PathBuf, frame: &Canvas, scale: usize, (band_h, band): &(usize, Vec<Rgb>)) {
+    let (w, art_h) = (frame.width as usize * scale, frame.height as usize * scale);
+    let h = art_h + band_h;
     let mut encoder = png::Encoder::new(BufWriter::new(File::create(path).unwrap()), w as u32, h as u32);
     encoder.set_color(png::ColorType::Rgb);
     encoder.set_depth(png::BitDepth::Eight);
     let mut writer = encoder.write_header().unwrap();
     let mut data = Vec::with_capacity(w * h * 3);
-    for y in 0..h {
+    for y in 0..art_h {
         for x in 0..w {
             data.extend_from_slice(&frame.pixels[(y / scale) * frame.width as usize + x / scale]);
         }
     }
+    for pixel in band {
+        data.extend_from_slice(pixel);
+    }
     writer.write_image_data(&data).unwrap();
 }
 
-fn write_gif(path: &PathBuf, frames: &[Canvas], scale: usize, duration: u32) {
-    let (mut palette, index_of) = build_palette(frames);
+/// The footer band is part of the first frame only: later frames keep it (disposal "keep").
+fn write_gif(path: &PathBuf, frames: &[Canvas], scale: usize, duration: u32, (band_h, band): &(usize, Vec<Rgb>)) {
+    let (mut palette, index_of) = build_palette(frames, band);
     // One extra slot after the colours: transparent, for pixels unchanged since the
     // previous frame. Same trick as Pillow, it roughly halves the file size.
     let transparent = palette.len() as u8;
     palette.push([0, 0, 0]);
     let palette = padded(palette);
     let (aw, ah) = (frames[0].width as usize, frames[0].height as usize);
-    let (w, h) = (aw * scale, ah * scale);
+    let (w, h) = (aw * scale, ah * scale + band_h);
     let mut flat = Vec::with_capacity(palette.len() * 3);
     for color in &palette {
         flat.extend_from_slice(color);
@@ -117,6 +123,7 @@ fn write_gif(path: &PathBuf, frames: &[Canvas], scale: usize, duration: u32) {
             }
         };
         let (bw, bh) = ((x1 - x0 + 1) * scale, (y1 - y0 + 1) * scale);
+        let rows = if n == 0 { bh + band_h } else { bh };
         let mut buffer = Vec::with_capacity(bw * bh);
         for y in 0..bh {
             for x in 0..bw {
@@ -125,11 +132,14 @@ fn write_gif(path: &PathBuf, frames: &[Canvas], scale: usize, duration: u32) {
                 buffer.push(if unchanged { transparent } else { frame[at] });
             }
         }
+        if n == 0 {
+            buffer.extend(band.iter().map(|pixel| index_of[pixel]));
+        }
         let mut gif_frame = gif::Frame::default();
         gif_frame.left = (x0 * scale) as u16;
         gif_frame.top = (y0 * scale) as u16;
         gif_frame.width = bw as u16;
-        gif_frame.height = bh as u16;
+        gif_frame.height = rows as u16;
         gif_frame.buffer = buffer.into();
         // Pillow writes int(duration / 10) hundredths of a second.
         gif_frame.delay = (duration / 10) as u16;
@@ -159,12 +169,10 @@ fn changed_box(a: &[u8], b: &[u8], w: usize, h: usize) -> Option<(usize, usize, 
 /// One palette for the whole loop: exact when the loop has at most 255 colours,
 /// otherwise a median cut down to 255 colours with nearest-colour mapping.
 /// The 256th slot is kept free for transparency.
-fn build_palette(frames: &[Canvas]) -> (Vec<Rgb>, HashMap<Rgb, u8>) {
+fn build_palette(frames: &[Canvas], extra: &[Rgb]) -> (Vec<Rgb>, HashMap<Rgb, u8>) {
     let mut histogram: HashMap<Rgb, u64> = HashMap::new();
-    for frame in frames {
-        for pixel in &frame.pixels {
-            *histogram.entry(*pixel).or_default() += 1;
-        }
+    for pixel in frames.iter().flat_map(|frame| frame.pixels.iter()).chain(extra) {
+        *histogram.entry(*pixel).or_default() += 1;
     }
     let mut colors: Vec<(Rgb, u64)> = histogram.into_iter().collect();
     colors.sort();
