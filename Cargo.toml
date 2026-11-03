@@ -2,6 +2,9 @@
 name = "lgtm-md"
 version = "0.1.0"
 edition = "2024"
+license = "MIT"
+description = "Animated pixel-art widgets for GitHub profile READMEs, drawn from your real activity."
+repository = "https://github.com/eliorpom-cmd/lgtm.md"
 
 [dependencies]
 gif = "0.14.2"
