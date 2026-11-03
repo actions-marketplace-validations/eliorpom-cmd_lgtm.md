@@ -16,7 +16,9 @@ use crate::dates::{civil_from_days, days_from_civil, iso, today};
 
 const DAYS: usize = 90;
 const API: &str = "https://api.github.com/graphql";
-/// Pages read per list at most (100 repositories or 10 followed accounts per page).
+/// Tries per query when GitHub times out.
+const RETRIES: usize = 4;
+/// Pages read per list at most (50 repositories or 10 followed accounts per page).
 const MAX_PAGES: usize = 100;
 
 type Result<T> = std::result::Result<T, String>;
@@ -48,14 +50,25 @@ impl Client {
         Ok(Client { token, agent })
     }
 
-    /// Runs a query and returns its `data`, like `graphql()` in collect.py.
+    /// Runs a query and returns its `data`. GitHub answers heavy queries with 502/503/504
+    /// now and then: those are retried after a pause.
     fn graphql(&self, query: &str, variables: Value) -> Result<Value> {
         let body = json!({"query": query, "variables": variables});
-        let mut response = self.agent.post(API)
-            .header("Authorization", &format!("bearer {}", self.token))
-            .header("User-Agent", "lgtm-md")
-            .send_json(&body)
-            .map_err(|e| format!("GitHub API: {e}"))?;
+        let mut attempt = 0;
+        let mut response = loop {
+            attempt += 1;
+            match self.agent.post(API)
+                .header("Authorization", &format!("bearer {}", self.token))
+                .header("User-Agent", "lgtm-md")
+                .send_json(&body)
+            {
+                Ok(response) => break response,
+                Err(ureq::Error::StatusCode(code)) if (502..=504).contains(&code) && attempt < RETRIES => {
+                    std::thread::sleep(std::time::Duration::from_secs(3 * attempt as u64));
+                }
+                Err(error) => return Err(format!("GitHub API: {error}")),
+            }
+        };
         let mut reply: Value = response.body_mut().read_json().map_err(|e| format!("GitHub API reply: {e}"))?;
         // A partial reply (data plus errors) would read as zeros: fail instead.
         let has_errors = reply.get("errors").and_then(Value::as_array).is_some_and(|errors| !errors.is_empty());
@@ -216,7 +229,7 @@ fn owned_repos(client: &Client, login: &str) -> Result<Vec<Value>> {
     let query = r#"
     query($login: String!, $cursor: String) {
       user(login: $login) {
-        repositories(ownerAffiliations: OWNER, isFork: false, first: 100, after: $cursor) {
+        repositories(ownerAffiliations: OWNER, isFork: false, first: 50, after: $cursor) {
           pageInfo { hasNextPage endCursor }
           nodes { name primaryLanguage { name color } languages(first: 20) { edges { size node { name color } } } }
         }
@@ -243,7 +256,7 @@ fn commits_by_month(client: &Client, login: &str, repos: &[Value], windows: &[(i
         months[index].entry(name).or_insert((0, color)).0 += count;
     };
 
-    for chunk in repos.chunks(5) {
+    for chunk in repos.chunks(4) {
         let parts: Vec<String> = chunk
             .iter()
             .enumerate()
