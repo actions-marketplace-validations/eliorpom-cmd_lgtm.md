@@ -11,13 +11,13 @@ use crate::pixel::{mix, Rgb};
 
 pub const REPO: &str = "eliorpom-cmd/lgtm.md";
 const MOTTO: &str = "✓ Looks good to README";
-const HEIGHT: usize = 18;
-const SIZE: f32 = 11.0;
+const HEIGHT: usize = 20;
+const SIZE: f32 = 12.0;
 const PAD: f32 = 8.0;
 /// GitHub's dark page colour, so the band reads as a caption rather than part of the scene.
 const BACKGROUND: Rgb = [13, 17, 23];
-const QUIET: Rgb = [110, 118, 129];
-const LINK: Rgb = [139, 148, 158];
+const QUIET: Rgb = [158, 166, 176];
+const LINK: Rgb = [214, 220, 226];
 
 static REGULAR: &[u8] = include_bytes!("../assets/fonts/MonaSans-Regular.ttf");
 static MEDIUM: &[u8] = include_bytes!("../assets/fonts/MonaSans-Medium.ttf");

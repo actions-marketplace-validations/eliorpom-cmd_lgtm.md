@@ -519,6 +519,12 @@ fn sweep(cells: &PySet, grid: &mut IndexMap<Cell, usize>, rng: &mut Random) -> b
             sides.sort_by_key(|side| (col + side).abs());
         }
         options.extend(sides.iter().map(|side| (col + side, row - 1)));
+        // Resting on the glass rather than on sand: slide along the steep wall toward the hole.
+        if col != 0 && !cells.contains(&(col, row - 1)) {
+            let inward = -col.signum();
+            options.push((col + 2 * inward, row - 1));
+            options.push((col + inward, row));
+        }
         for target in options {
             if cells.contains(&target) && !grid.contains_key(&target) && target.1 >= 0 {
                 let value = grid.shift_remove(&cell).unwrap();
@@ -532,15 +538,17 @@ fn sweep(cells: &PySet, grid: &mut IndexMap<Cell, usize>, rng: &mut Random) -> b
 }
 
 /// Pour grains one by one onto the centre of the lower bulb: a cone that grows,
-/// grains rolling down its slopes. Returns each grain's path, landing cell first.
+/// grains rolling down its slopes until they rest (no friction: a spike is not sand). Returns each grain's path, landing cell first.
 fn settle(cells: &PySet, count: usize, rng: &mut Random) -> Vec<Vec<Cell>> {
     let mut filled: HashSet<Cell> = HashSet::new();
     let mut paths = Vec::with_capacity(count);
     let top_row = cells.members.iter().map(|cell| cell.1).max().unwrap();
     for _ in 0..count {
-        let land = filled.iter().filter(|cell| cell.0 == 0).map(|cell| cell.1).max().unwrap_or(-1) + 1;
-        let land = if cells.contains(&(0, land)) { land } else { top_row };
-        let path = roll(cells, &|c: &Cell| filled.contains(c), 0, land, rng, 0.12);
+        // The stream wobbles a little, so the cone grows unevenly instead of as a ruled pyramid.
+        let col = [-1, 0, 0, 1][rng.randrange_to(4) as usize];
+        let land = filled.iter().filter(|cell| cell.0 == col).map(|cell| cell.1).max().unwrap_or(-1) + 1;
+        let land = if cells.contains(&(col, land)) { land } else { top_row };
+        let path = roll(cells, &|c: &Cell| filled.contains(c), col, land, rng, 0.0);
         filled.insert(*path.last().unwrap());
         paths.push(path);
     }
@@ -571,7 +579,19 @@ pub fn render(data: &Data) -> String {
     names.sort_by_key(|name| (name.as_str() == "Other", -yearly[*name]));
     let rank: HashMap<String, usize> = names.iter().enumerate().map(|(i, name)| ((*name).clone(), i)).collect();
 
-    let sequence = month_grains(months, step, &rank);
+    let mut sequence = month_grains(months, step, &rank);
+    // Languages whose GitHub colours look alike (Python and TypeScript, Swift and HTML) get
+    // colours that can be told apart, the most used language keeping its own.
+    let mut by_rank: Vec<(String, Rgb)> = Vec::new();
+    for name in &names {
+        if let Some((_, color)) = sequence.iter().find(|(n, _)| n == *name) {
+            by_rank.push(((*name).clone(), *color));
+        }
+    }
+    let colors: HashMap<String, Rgb> = crate::pixel::distinct_colors(&by_rank).into_iter().collect();
+    for (name, color) in sequence.iter_mut() {
+        *color = colors[name];
+    }
     let count = sequence.len();
     let mut rng = Random::new(9);
     let variants: Vec<usize> = (0..count).map(|_| rng.randrange_to(GRAINS.len() as i64) as usize).collect();
@@ -657,7 +677,11 @@ pub fn render(data: &Data) -> String {
             let path = &paths[index];
             if age < event.fall {
                 let y = (NECK + 2) as f64 + 0.5 * GRAVITY * age as f64 * age as f64;
-                draw_grain(&mut canvas, CX - 1, py_round(y) - 1, &shades[name], variants[index]);
+                // Drifts from the neck toward its landing column as it falls.
+                let (land_x, _) = cell_box(paths[index][0].0, paths[index][0].1, false);
+                let drift = (age as f64 / event.fall as f64).powi(2);
+                let x = py_round((CX - 1) as f64 + (land_x - (CX - 1)) as f64 * drift);
+                draw_grain(&mut canvas, x, py_round(y) - 1, &shades[name], variants[index]);
             } else {
                 let step_index = ((path.len() as i64 - 1).min(age - event.fall)) as usize;
                 let (col, row) = path[step_index];
@@ -738,5 +762,6 @@ pub fn render(data: &Data) -> String {
     };
 
     let frames: Vec<Canvas> = (0..frames_total).map(draw).collect();
-    save(&frames, "hourglass", Save { still: Some(frames.len() - 1), duration: DURATION_MS, ..Save::default() })
+    // Plays once: when the sand has run, the pile stays.
+    save(&frames, "hourglass", Save { still: Some(frames.len() - 1), duration: DURATION_MS, once: true, ..Save::default() })
 }

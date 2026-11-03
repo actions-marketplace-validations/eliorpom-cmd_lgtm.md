@@ -34,11 +34,13 @@ pub struct Save {
     pub still: Option<usize>,
     pub scale: usize,
     pub duration: u32,
+    /// Play the animation once and stay on the last frame, instead of looping.
+    pub once: bool,
 }
 
 impl Default for Save {
     fn default() -> Self {
-        Save { still: None, scale: SCALE, duration: FRAME_MS }
+        Save { still: None, scale: SCALE, duration: FRAME_MS, once: false }
     }
 }
 
@@ -51,7 +53,7 @@ pub fn save(frames: &[Canvas], name: &str, options: Save) -> String {
     if !out.raw_only {
         std::fs::create_dir_all(&out.dir).expect("cannot create output directory");
         let band = crate::brand::band(name, frames[0].width as usize * options.scale);
-        write_gif(&out.dir.join(format!("{name}.gif")), frames, options.scale, options.duration, &band);
+        write_gif(&out.dir.join(format!("{name}.gif")), frames, options.scale, options.duration, options.once, &band);
         write_png(&out.dir.join(format!("{name}.png")), &frames[still], options.scale, &band);
     }
     name.to_string()
@@ -93,7 +95,7 @@ fn write_png(path: &PathBuf, frame: &Canvas, scale: usize, (band_h, band): &(usi
 }
 
 /// The footer band is part of the first frame only: later frames keep it (disposal "keep").
-fn write_gif(path: &PathBuf, frames: &[Canvas], scale: usize, duration: u32, (band_h, band): &(usize, Vec<Rgb>)) {
+fn write_gif(path: &PathBuf, frames: &[Canvas], scale: usize, duration: u32, once: bool, (band_h, band): &(usize, Vec<Rgb>)) {
     let (mut palette, index_of) = build_palette(frames, band);
     // One extra slot after the colours: transparent, for pixels unchanged since the
     // previous frame. Same trick as Pillow, it roughly halves the file size.
@@ -108,7 +110,10 @@ fn write_gif(path: &PathBuf, frames: &[Canvas], scale: usize, duration: u32, (ba
     }
     let file = BufWriter::new(File::create(path).unwrap());
     let mut encoder = gif::Encoder::new(file, w as u16, h as u16, &flat).unwrap();
-    encoder.set_repeat(gif::Repeat::Infinite).unwrap();
+    // Without the looping extension, a GIF plays once and stays on its last frame.
+    if !once {
+        encoder.set_repeat(gif::Repeat::Infinite).unwrap();
+    }
 
     let indexed: Vec<Vec<u8>> =
         frames.iter().map(|frame| frame.pixels.iter().map(|p| index_of[p]).collect()).collect();

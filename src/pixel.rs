@@ -300,3 +300,63 @@ pub fn short_date(iso: &str) -> String {
     let month: usize = iso[5..7].parse().unwrap_or(1);
     format!("{} {}", MONTHS[month - 1], &iso[8..10])
 }
+
+/// Fallback colours for languages whose GitHub colours look alike: bright, far apart, and
+/// readable on the dark cards.
+const DISTINCT: [Rgb; 10] = [
+    [64, 160, 255], [247, 185, 52], [120, 200, 80], [230, 72, 46], [170, 110, 230],
+    [240, 110, 170], [60, 200, 190], [250, 240, 120], [200, 200, 210], [150, 90, 50],
+];
+
+fn lab(color: Rgb) -> [f64; 3] {
+    let linear = |c: u8| {
+        let c = c as f64 / 255.0;
+        if c <= 0.04045 { c / 12.92 } else { ((c + 0.055) / 1.055).powf(2.4) }
+    };
+    let (r, g, b) = (linear(color[0]), linear(color[1]), linear(color[2]));
+    let x = (0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.95047;
+    let y = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    let z = (0.0193 * r + 0.1192 * g + 0.9505 * b) / 1.08883;
+    let f = |t: f64| if t > 0.008856 { t.cbrt() } else { 7.787 * t + 16.0 / 116.0 };
+    [116.0 * f(y) - 16.0, 500.0 * (f(x) - f(y)), 200.0 * (f(y) - f(z))]
+}
+
+/// Perceptual distance between two colours (CIE76).
+pub fn color_distance(a: Rgb, b: Rgb) -> f64 {
+    let (a, b) = (lab(a), lab(b));
+    ((a[0] - b[0]).powi(2) + (a[1] - b[1]).powi(2) + (a[2] - b[2]).powi(2)).sqrt()
+}
+
+/// One colour per language that stays tellable apart. In order (most used first), a language
+/// keeps its GitHub colour when it is far from the colours already kept; the others then get
+/// the fallback colour farthest from every colour in use, so a replacement never takes a
+/// colour people expect for another language. "Other" stays grey.
+pub fn distinct_colors(languages: &[(String, Rgb)]) -> Vec<(String, Rgb)> {
+    const TOO_CLOSE: f64 = 45.0;
+    const OTHER: Rgb = [139, 148, 158];
+    let nearest = |c: Rgb, used: &[Rgb]| used.iter().map(|o| color_distance(c, *o)).fold(f64::MAX, f64::min);
+    let mut kept: Vec<Option<Rgb>> = Vec::new();
+    let mut used: Vec<Rgb> = Vec::new();
+    for (name, color) in languages {
+        let color = if name == "Other" { OTHER } else { *color };
+        if name == "Other" || nearest(color, &used) >= TOO_CLOSE {
+            kept.push(Some(color));
+            used.push(color);
+        } else {
+            kept.push(None);
+        }
+    }
+    let mut result = Vec::new();
+    for ((name, _), kept) in languages.iter().zip(kept) {
+        let color = kept.unwrap_or_else(|| {
+            let pick = *DISTINCT
+                .iter()
+                .max_by(|a, b| nearest(**a, &used).partial_cmp(&nearest(**b, &used)).unwrap())
+                .unwrap();
+            used.push(pick);
+            pick
+        });
+        result.push((name.clone(), color));
+    }
+    result
+}

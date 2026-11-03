@@ -587,11 +587,14 @@ pub fn render(data: &Data) -> String {
             canvas.put(x, y, if on < 0.1 { STAR[2] } else if on < 0.45 { STAR[1] } else { STAR[0] });
         }
         let line_age = f - build;
+        // The account's login when it fits its half of the card, else "ME" (the caption says "I follow").
+        let login = data.login.to_uppercase();
+        let me = if !login.is_empty() && crate::pixel::text_width(&login, Font::F57, 2) <= 124 { login } else { "ME".to_string() };
 
         for index in 0..2 {
             let cx = CENTERS[index];
             let (side, out) = if index == 0 { (YOU, -1) } else { (THEM, 1) };
-            let label = if index == 0 { "YOU" } else { "MEDIAN" };
+            let label = if index == 0 { me.as_str() } else { "MEDIAN" };
             let shown: Option<i64> = match &sims[index] {
                 None => {
                     empty_lot_sign(&mut canvas, cx);

@@ -424,5 +424,5 @@ pub fn render(data: &Data) -> String {
         .map(|frame| draw_frame(&board, &lines, &plans, &mut cache, frame))
         .collect();
     // Still: the first stat fully settled, just before the board turns over.
-    save(&frames, "departures", Save { still: Some(PER_STAT - 1), scale: SCALE, duration: FRAME_MS })
+    save(&frames, "departures", Save { still: Some(PER_STAT - 1), scale: SCALE, duration: FRAME_MS, once: false })
 }
