@@ -971,7 +971,7 @@ fn draw_grass(canvas: &mut Canvas, blades: &[Blade], t: f64) {
 // Widget ----------------------------------------------------------------------------------
 
 pub fn render(data: &Data) -> String {
-    let mut rng = Random::new("cerisier"); // Seed word of the original design: changing it redraws the scene.
+    let mut rng = Random::new("blossom"); // Seed word: changing it redraws the scene.
     let values: Vec<i64> = data.days.iter().map(|day| day.count).collect();
     let total_prs = data.merged_prs_30d;
 

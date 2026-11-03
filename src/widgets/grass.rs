@@ -856,7 +856,7 @@ fn draw_twinkles(c: &mut Canvas, stars: &[Twinkle], t: f64) {
 // Widget ----------------------------------------------------------------------------------
 
 pub fn render(data: &Data) -> String {
-    let mut rng = Random::new("champ"); // Seed word of the original design: changing it redraws the scene.
+    let mut rng = Random::new("meadow"); // Seed word: changing it redraws the scene.
     let phases: Phases = [
         (1, 260, rng.uniform(0.0, 6.3), 0.55),
         (2, 170, rng.uniform(0.0, 6.3), 0.35),
