@@ -1,0 +1,88 @@
+# Collects a GitHub account's activity and draws the pixel-art widgets as GIFs.
+name: LGTM.md
+description: Looks good to ReadMe. Animated pixel-art widgets for a GitHub profile README, drawn from your real activity.
+branding:
+  icon: image
+  color: green
+
+inputs:
+  token:
+    description: >
+      Token used to read your activity. The default token only sees public data; a
+      fine-grained or classic token with read access to your repositories also counts
+      private contributions and private repositories' languages.
+    default: ${{ github.token }}
+  user:
+    description: GitHub login to draw. Defaults to the owner of the repository running the workflow.
+    default: ${{ github.repository_owner }}
+  widgets:
+    description: >
+      Widgets to draw, separated by spaces or new lines. Duels are written
+      duel-<login> (30 days), duel-<login>-7 or duel-<login>-365 (duel-<login>-30 for a
+      login that itself ends in -7 or -365). Empty: every widget except duels.
+    default: flame counter hourglass ecg departures donut grass cherry-tree forest fireworks fireworks-commits records median
+  output-dir:
+    description: Folder of the repository where the GIFs are written.
+    default: widgets
+
+outputs:
+  output-dir:
+    description: Folder holding the GIFs.
+    value: ${{ inputs.output-dir }}
+
+runs:
+  using: composite
+  steps:
+    - name: Get the binary
+      shell: bash
+      env:
+        ACTION_REPO: ${{ github.action_repository }}
+        ACTION_REF: ${{ github.action_ref }}
+        ACTION_PATH: ${{ github.action_path }}
+        RUNNER_OS_NAME: ${{ runner.os }}
+        RUNNER_ARCH_NAME: ${{ runner.arch }}
+      run: |
+        set -euo pipefail
+        case "$RUNNER_OS_NAME/$RUNNER_ARCH_NAME" in
+          Linux/X64) target=x86_64-unknown-linux-musl ;;
+          Linux/ARM64) target=aarch64-unknown-linux-musl ;;
+          macOS/ARM64) target=aarch64-apple-darwin ;;
+          macOS/X64) target=x86_64-apple-darwin ;;
+          Windows/X64) target=x86_64-pc-windows-msvc ;;
+          *) target="" ;;
+        esac
+        exe=""; [ "$RUNNER_OS_NAME" = Windows ] && exe=".exe"
+        bin="$RUNNER_TEMP/lgtm-md$exe"
+        url="https://github.com/$ACTION_REPO/releases/download/$ACTION_REF/lgtm-md-$target$exe"
+        # A release tag has a prebuilt binary; a branch or commit is built from source.
+        if [ -n "$target" ] && curl -fsSL -o "$bin" "$url"; then
+          chmod +x "$bin"
+          echo "Using the released binary $ACTION_REF ($target)."
+        else
+          echo "No released binary for $ACTION_REF on $RUNNER_OS_NAME/$RUNNER_ARCH_NAME, building from source."
+          cargo build --release --locked --manifest-path "$ACTION_PATH/Cargo.toml"
+          cp "$ACTION_PATH/target/release/lgtm-md$exe" "$bin"
+        fi
+        echo "LGTM_MD_BIN=$bin" >> "$GITHUB_ENV"
+
+    - name: Collect the activity and draw
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.token }}
+        USER_LOGIN: ${{ inputs.user }}
+        WIDGETS: ${{ inputs.widgets }}
+        OUTPUT_DIR: ${{ inputs.output-dir }}
+      run: |
+        set -euo pipefail
+        read -r -a names <<< "$(echo "$WIDGETS" | tr '\n' ' ')"
+        # Empty-array expansions are guarded: bash 3.2 (macOS runners) treats them as unset under set -u.
+        # Accounts to duel against are collected too (public data only), once each.
+        friends=()
+        while IFS= read -r login; do
+          [ -n "$login" ] && friends+=("$login")
+        done < <("$LGTM_MD_BIN" duel-logins ${names[@]+"${names[@]}"})
+        work="$RUNNER_TEMP/lgtm-md-data"
+        mkdir -p "$work"
+        "$LGTM_MD_BIN" collect "$USER_LOGIN" "$work/data.json" ${friends[@]+"${friends[@]}"}
+        mkdir -p "$OUTPUT_DIR"
+        "$LGTM_MD_BIN" "$work/data.json" ${names[@]+"${names[@]}"} --out "$OUTPUT_DIR"
