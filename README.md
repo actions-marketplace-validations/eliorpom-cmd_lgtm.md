@@ -170,7 +170,7 @@ cargo build --release
 ./target/release/lgtm-md data.json flame grass --out widgets
 ```
 
-Without widget names, every widget is drawn. `examples/data.json` holds sample data for a made-up account, so you can try the drawing without a token.
+Without widget names, every widget except the duels is drawn. Add `--stills` for a still PNG of each widget, `--help` for the full list of options. `examples/data.json` holds sample data for a made-up account, so you can try the drawing without a token.
 
 ## What gets counted
 

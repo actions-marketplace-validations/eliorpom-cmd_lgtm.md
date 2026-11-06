@@ -1,4 +1,4 @@
-//! Port of `pixel.save`: GIF with one palette for the whole loop, plus a still PNG.
+//! Port of `pixel.save`: GIF with one palette for the whole loop, plus a still PNG on request.
 //!
 //! The raw dump (`--raw DIR`) writes the art-size frames before any quantization, in the
 //! same format as `bench/dump.py`; the parity bench compares those, so the GIF palette does
@@ -17,6 +17,8 @@ pub struct Output {
     pub raw: Option<PathBuf>,
     /// Skip GIF/PNG encoding (bench runs only need the raw frames).
     pub raw_only: bool,
+    /// Also write a still PNG next to each GIF (`--stills`).
+    pub stills: bool,
 }
 
 static OUTPUT: OnceLock<Output> = OnceLock::new();
@@ -54,7 +56,9 @@ pub fn save(frames: &[Canvas], name: &str, options: Save) -> String {
         std::fs::create_dir_all(&out.dir).expect("cannot create output directory");
         let band = crate::brand::band(name, frames[0].width as usize * options.scale);
         write_gif(&out.dir.join(format!("{name}.gif")), frames, options.scale, options.duration, options.once, &band);
-        write_png(&out.dir.join(format!("{name}.png")), &frames[still], options.scale, &band);
+        if out.stills {
+            write_png(&out.dir.join(format!("{name}.png")), &frames[still], options.scale, &band);
+        }
     }
     name.to_string()
 }

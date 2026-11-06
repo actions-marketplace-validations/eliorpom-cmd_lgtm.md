@@ -1,6 +1,6 @@
 //! LGTM.md: animated pixel-art widgets for a GitHub profile README.
 //!
-//! Usage: lgtm-md <data.json> [names...] [--out DIR] [--raw DIR] [--raw-only]
+//! Usage: lgtm-md <data.json> [names...] [--out DIR] [--stills] [--raw DIR] [--raw-only]
 //!        lgtm-md collect <login> [out.json] [friend...]
 //!        lgtm-md duel-logins <names...>   (rivals to collect for these widget names)
 //!        lgtm-md pycheck <cases.json>   (parity check of the Python primitives)
@@ -17,6 +17,25 @@
     clippy::unnecessary_sort_by,
     clippy::field_reassign_with_default
 )]
+
+const USAGE: &str = "\
+LGTM.md: animated pixel-art widgets for a GitHub profile README.
+
+Usage:
+  lgtm-md collect <login> [data.json] [friend...]   read an account's activity from GitHub
+  lgtm-md <data.json> [widget...] [--out DIR]       draw the widgets as GIFs (default: out/)
+
+Options:
+  --out DIR    folder for the GIFs
+  --stills     also write a still PNG of each widget
+  -h, --help   show this help
+
+Without widget names, every widget except the duels is drawn. Duels: duel-<login>,
+duel-<login>-7 or duel-<login>-365, for a friend passed to collect.
+The token comes from GITHUB_TOKEN, else GH_TOKEN, else `gh auth token`.
+Widgets: flame counter hourglass ecg departures donut grass cherry-tree forest
+         fireworks fireworks-commits records median duel-<login>
+";
 
 mod brand;
 mod collect;
@@ -58,17 +77,23 @@ fn main() {
         pycheck::run(&PathBuf::from(std::env::args().nth(2).expect("pycheck needs a cases file")));
         return;
     }
+    if std::env::args().skip(1).any(|arg| arg == "--help" || arg == "-h") {
+        print!("{USAGE}");
+        return;
+    }
     let mut args = std::env::args().skip(1);
     let mut data_path = None;
     let mut names = Vec::new();
     let mut out = PathBuf::from("out");
     let mut raw = None;
     let mut raw_only = false;
+    let mut stills = false;
     while let Some(arg) = args.next() {
         match arg.as_str() {
             "--out" => out = PathBuf::from(args.next().expect("--out needs a directory")),
             "--raw" => raw = Some(PathBuf::from(args.next().expect("--raw needs a directory"))),
             "--raw-only" => raw_only = true,
+            "--stills" => stills = true,
             _ if data_path.is_none() => data_path = Some(PathBuf::from(arg)),
             _ => names.push(arg),
         }
@@ -78,7 +103,7 @@ fn main() {
         eprintln!("{error}");
         std::process::exit(1);
     });
-    export::configure(export::Output { dir: out, raw, raw_only });
+    export::configure(export::Output { dir: out, raw, raw_only, stills });
     let catalog = widgets::catalog();
     if names.is_empty() {
         // Duels need a rival collected in data.json: only drawn when named.
