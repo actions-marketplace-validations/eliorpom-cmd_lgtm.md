@@ -16,9 +16,9 @@ const H: i64 = 176;
 const GROUND: i64 = 140; // First row of soil; trees stand on GROUND - 1.
 const LEFT: i64 = 10;
 const RIGHT: i64 = 390; // Horizontal span of the forest.
-const WEEK_FULL: i64 = 700; // Contributions in a week for a full-height tree.
+const WEEK_FULL: i64 = 500; // Contributions in a week for a full-height tree.
 // A busier week makes a bigger tree: taller a little, much wider and fuller.
-const TREE_MIN: i64 = 10;
+const TREE_MIN: i64 = 7;
 const TREE_MAX: i64 = 58;
 const HALF_MIN: f64 = 2.0;
 const HALF_MAX: f64 = 9.5;
@@ -142,12 +142,14 @@ fn week_x(index: i64, count: i64) -> i64 {
     py_round(LEFT as f64 + step * (index as f64 + 0.5))
 }
 
-/// (height, half-width) on a fixed log scale; (0, 0) for an empty week.
+/// (height, half-width) on a fixed square-root scale; (0, 0) for an empty week. A log scale
+/// made weeks of 30 and 100 contributions look alike; the square root keeps quiet weeks
+/// visible and still tells busy weeks apart.
 fn tree_size(total: i64) -> (i64, f64) {
     if total <= 0 {
         return (0, 0.0);
     }
-    let level = 1.0f64.min((total as f64).ln_1p() / (WEEK_FULL as f64).ln_1p());
+    let level = 1.0f64.min((total as f64 / WEEK_FULL as f64).sqrt());
     (py_round(TREE_MIN as f64 + (TREE_MAX - TREE_MIN) as f64 * level), HALF_MIN + (HALF_MAX - HALF_MIN) * level)
 }
 

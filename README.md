@@ -57,6 +57,8 @@ jobs:
 <a href="https://github.com/eliorpom-cmd/lgtm.md"><img src="widgets/grass.gif" alt="My last 90 days on GitHub" width="100%"></a>
 ```
 
+The GIFs are drawn at twice their display size so they stay sharp on high-density screens, so always set a `width`: `100%` for the wide widgets, about `50%` for `flame` and `counter`, which sit well side by side.
+
 The image links back here so visitors can find the project. A small credit line under your widgets helps too:
 
 ```html
@@ -84,72 +86,130 @@ The token expires after a year at most. GitHub emails you before it does; create
 
 List the ones you want in the `widgets` input, one per line. Leave the input out to draw all of them except the duels.
 
-| Widget | What it shows |
+| Widget | In one line |
 | --- | --- |
-| `flame` | Your current streak of active days. The fire grows at 7, 30 and 100 days. |
-| `counter` | Contributions over the last 12 months, rolling up from yesterday's count. |
-| `hourglass` | Commits of the past year as coloured sand, one colour per language. Plays once, then the pile stays. |
-| `ecg` | The last 7 days as a heartbeat, with the week's total and daily average. |
-| `departures` | A split-flap board cycling through four of your stats. |
-| `donut` | Your top languages, as the icing of a doughnut. |
-| `grass` | One tuft of grass per day over 90 days. Flowers are languages, fireflies are merged pull requests. |
-| `cherry-tree` | One blossom cluster per day over 90 days, one falling petal per merged pull request. |
-| `forest` | One tree per week over 12 months, its height following that week's contributions. |
-| `fireworks` | One rocket per pull request merged in the last 7 days. |
-| `fireworks-commits` | One rocket per batch of commits in the last 7 days, coloured by language. |
-| `records` | Best day, longest streak and longest break of the last 12 months. |
-| `median` | Your contributions against the median of the accounts you follow. |
-| `duel-<login>` | You against a friend over 30 days. Add `-7` or `-365` for a week or a year. |
+| [`flame`](#flame) | Your current streak of active days. |
+| [`counter`](#counter) | Contributions over the last 12 months. |
+| [`hourglass`](#hourglass) | Commits of the past year, as sand coloured by language. |
+| [`ecg`](#ecg) | The last 7 days as a heartbeat. |
+| [`departures`](#departures) | A station board cycling through four stats. |
+| [`donut`](#donut) | Your top languages. |
+| [`grass`](#grass) | The last 90 days, one tuft of grass per day. |
+| [`cherry-tree`](#cherry-tree) | The last 90 days, one blossom cluster per day. |
+| [`forest`](#forest) | The last 12 months, one tree per week. |
+| [`fireworks`](#fireworks) | Pull requests merged in the last 7 days. |
+| [`fireworks-commits`](#fireworks-commits) | Commits of the last 7 days. |
+| [`records`](#records) | Best day, longest streak, longest break. |
+| [`median`](#median) | You against the accounts you follow. |
+| [`duel-<login>`](#duel-login) | You against one friend. |
 
-Every GIF carries a thin band underneath that says what it shows and when it was last updated.
+Every GIF has a thin band underneath that says what it shows and when it was last updated. The examples below use made-up data.
 
-### `flame` · `counter`
+### `flame`
 
-<img src="examples/preview/flame.gif" alt="Campfire for a 27-day streak" width="49%"> <img src="examples/preview/counter.gif" alt="Drum counter showing 2491 contributions" width="49%">
+<img src="examples/preview/flame.gif" alt="Campfire for a streak of active days" width="52%">
+
+- **The number** is your current streak: days in a row with at least one contribution, up to yesterday.
+- **The fire** grows in four steps: a small fire under 7 days, medium from 7, large from 30, and a blue heart from 100. The pips under the number show which step you reached.
+- **No streak** leaves cold logs, a few dying embers and a thread of smoke.
+
+### `counter`
+
+<img src="examples/preview/counter.gif" alt="Drum counter of contributions over 12 months" width="52%">
+
+- **The drums** show your contributions over the last 12 months. They roll from the day before's total up to today's, like a car's odometer.
+- **"+N yesterday"** is what yesterday added.
 
 ### `hourglass`
 
-<img src="examples/preview/hourglass.gif" alt="Hourglass of coloured sand, one grain per 20 commits" width="100%">
+<img src="examples/preview/hourglass.gif" alt="Hourglass of coloured sand, one grain per batch of commits" width="100%">
+
+- **Each grain** is a batch of commits from the past year; the line at the bottom says how many (1 grain = 20 commits here).
+- **The colour** of a grain is the language of the repository the commits went to. The legend lists them, most used first.
+- **The sand falls in order**, oldest first, so the layers of the pile read like the year: bottom is a year ago, top is this month.
+- On your profile the hourglass plays once and the pile stays. It loops here so you can watch it again.
 
 ### `ecg`
 
-<img src="examples/preview/ecg.gif" alt="Heartbeat of the last 7 days on a green monitor" width="100%">
+<img src="examples/preview/ecg.gif" alt="Heartbeat of the last 7 days on a monitor" width="100%">
+
+- **One heartbeat per day** over the last 7 days, oldest on the left: a single beat for a quiet day, two beats for a busy one, a flat line for a day without contributions.
+- **The highest beat** is your best day of the week, highlighted in amber with its day name.
+- **On the right**: the week's total, the daily average and the best day's count.
 
 ### `departures`
 
-<img src="examples/preview/departures.gif" alt="Split-flap board showing 2491 contributions" width="100%">
+<img src="examples/preview/departures.gif" alt="Split-flap departure board" width="100%">
+
+- **A station board** whose flaps turn over every few seconds to show four stats in turn: contributions over 12 months, pull requests merged in 30 days, current streak, and top language.
 
 ### `donut`
 
-<img src="examples/preview/donut.gif" alt="Doughnut with one icing colour per language" width="80%">
+<img src="examples/preview/donut.gif" alt="Doughnut iced in one colour per language" width="80%">
+
+- **Each slice of icing** is a language, sized by its share of the code in your repositories. The five largest are named, the rest is vanilla "Other".
+- **Colours** are GitHub's language colours. When two look alike (Python and TypeScript are both blue), the less used one gets a colour you can tell apart.
+- Markup (HTML, CSS, MDX, notebooks…) is left out, so the doughnut shows the languages you program in.
+
+### `grass`
+
+<img src="examples/preview/grass.gif" alt="Night field: one tuft of grass per day" width="100%">
+
+- **One tuft per day** over the last 90 days, oldest on the left, yesterday on the right. The busier the day, the taller the tuft; a day off leaves bare ground.
+- **Flowers** are your languages, in proportion: more flowers of a colour means more code in that language.
+- **Fireflies** are the pull requests merged in the last 30 days, one each.
 
 ### `cherry-tree`
 
-<img src="examples/preview/cherry-tree.gif" alt="Cherry tree in bloom at dusk, petals falling for merged pull requests" width="100%">
+<img src="examples/preview/cherry-tree.gif" alt="Cherry tree in bloom at dusk" width="100%">
+
+- **The crown** is cut into 90 slices, one per day, oldest on the left. A slice blossoms when you contributed that day and stays bare when you didn't.
+- **Each falling petal** is a pull request merged in the last 30 days; the count is in the corner.
 
 ### `forest`
 
 <img src="examples/preview/forest.gif" alt="Forest with one tree per week of the year" width="100%">
 
-### `fireworks` · `fireworks-commits`
+- **One tree per week** over the last 12 months, oldest on the left, months marked underneath.
+- **The height and width of a tree** follow that week's contributions: a sapling for a quiet week, a tall wide tree for a busy one.
+- **An empty week** leaves a stump. **A pause of several weeks** becomes a clearing where a deer grazes.
+
+### `fireworks`
 
 <img src="examples/preview/fireworks.gif" alt="Fireworks over a lake, one rocket per merged pull request" width="100%">
 
+- **One rocket per pull request** merged in the last 7 days, launched in the order they were merged.
+- **The colour of a burst** is the main language of the pull request's repository; the legend counts them.
+
+### `fireworks-commits`
+
 <img src="examples/preview/fireworks-commits.gif" alt="Fireworks over a lake, one rocket per batch of commits" width="100%">
+
+- **One rocket per batch of commits** of the last 7 days; the subtitle says how many commits a full burst stands for. A smaller burst is a batch that isn't full.
+- **The colour** is the language of the repository; the legend gives the commits per language.
 
 ### `records`
 
 <img src="examples/preview/records.gif" alt="Three brass plaques: best day, longest streak, longest break" width="100%">
 
+- **Best day**: your most contributions in a single day over the last 12 months, with its date.
+- **Longest streak**: the most days in a row with at least one contribution.
+- **Longest break**: the most days in a row without any.
+
 ### `median`
 
-<img src="examples/preview/median.gif" alt="Two brick towers: your contributions and the median of the accounts you follow" width="70%">
+<img src="examples/preview/median.gif" alt="Two builders raising brick towers" width="70%">
+
+- **Two builders** raise brick towers: yours on the left with your contributions over 12 months, the other with the median of the accounts you follow.
+- **The median** is the middle account: half of the people you follow contributed more, half less. A dashed line carries its height across to your tower so you can compare.
 
 ### `duel-<login>`
 
-<img src="examples/preview/duel-rival.gif" alt="Duel over 30 days between two accounts" width="100%">
+<img src="examples/preview/duel-rival.gif" alt="Duel between two accounts over 30 days" width="100%">
 
-The friend's side only uses public data. Duel as many friends as you like: `duel-torvalds`, `duel-octocat-7`… For a login that itself ends in `-7` or `-365`, write the period explicitly: `duel-<login>-30`.
+- **You on the left in blue, your friend on the right in red**, with your avatars.
+- **Each pillar** is one day (one week for the 12-month duel), both sides on the same scale. The power bars at the top fill up to each total, and the winner is crowned.
+- Write `duel-torvalds` for 30 days, `duel-torvalds-7` for a week, `duel-torvalds-365` for a year. For a login that itself ends in `-7` or `-365`, add the period: `duel-<login>-30`. Your friend's side only uses public data.
 
 ## Action inputs
 

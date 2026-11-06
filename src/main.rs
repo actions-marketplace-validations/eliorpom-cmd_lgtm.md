@@ -1,6 +1,6 @@
 //! LGTM.md: animated pixel-art widgets for a GitHub profile README.
 //!
-//! Usage: lgtm-md <data.json> [names...] [--out DIR] [--stills] [--raw DIR] [--raw-only]
+//! Usage: lgtm-md <data.json> [names...] [--out DIR] [--stills] [--loop] [--raw DIR] [--raw-only]
 //!        lgtm-md collect <login> [out.json] [friend...]
 //!        lgtm-md duel-logins <names...>   (rivals to collect for these widget names)
 //!        lgtm-md pycheck <cases.json>   (parity check of the Python primitives)
@@ -28,6 +28,7 @@ Usage:
 Options:
   --out DIR    folder for the GIFs
   --stills     also write a still PNG of each widget
+  --loop       loop every animation, including the hourglass that plays once
   -h, --help   show this help
 
 Without widget names, every widget except the duels is drawn. Duels: duel-<login>,
@@ -88,12 +89,14 @@ fn main() {
     let mut raw = None;
     let mut raw_only = false;
     let mut stills = false;
+    let mut loop_all = false;
     while let Some(arg) = args.next() {
         match arg.as_str() {
             "--out" => out = PathBuf::from(args.next().expect("--out needs a directory")),
             "--raw" => raw = Some(PathBuf::from(args.next().expect("--raw needs a directory"))),
             "--raw-only" => raw_only = true,
             "--stills" => stills = true,
+            "--loop" => loop_all = true,
             _ if data_path.is_none() => data_path = Some(PathBuf::from(arg)),
             _ => names.push(arg),
         }
@@ -103,7 +106,7 @@ fn main() {
         eprintln!("{error}");
         std::process::exit(1);
     });
-    export::configure(export::Output { dir: out, raw, raw_only, stills });
+    export::configure(export::Output { dir: out, raw, raw_only, stills, loop_all });
     let catalog = widgets::catalog();
     if names.is_empty() {
         // Duels need a rival collected in data.json: only drawn when named.

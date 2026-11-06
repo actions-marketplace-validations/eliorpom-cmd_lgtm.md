@@ -12,6 +12,10 @@ use std::sync::OnceLock;
 
 use crate::pixel::{Canvas, Rgb, FRAME_MS, SCALE};
 
+/// Output pixels per CSS pixel: GIFs are drawn twice as large as they are shown, for
+/// high-density screens. The README snippets set the display width to half the pixel width.
+pub const HIDPI: usize = 2;
+
 pub struct Output {
     pub dir: PathBuf,
     pub raw: Option<PathBuf>,
@@ -19,6 +23,8 @@ pub struct Output {
     pub raw_only: bool,
     /// Also write a still PNG next to each GIF (`--stills`).
     pub stills: bool,
+    /// Loop every animation, even those made to play once (`--loop`, for showcases).
+    pub loop_all: bool,
 }
 
 static OUTPUT: OnceLock<Output> = OnceLock::new();
@@ -52,6 +58,16 @@ pub fn save(frames: &[Canvas], name: &str, options: Save) -> String {
     if let Some(raw) = &out.raw {
         write_raw(&raw.join(format!("{name}.raw")), frames, options.duration, still);
     }
+    let options = Save { scale: options.scale * HIDPI, ..options };
+    // A play-once animation shown in a loop holds its last frame for 3 s before starting over.
+    let held: Vec<Canvas>;
+    let (frames, options) = if out.loop_all && options.once {
+        let hold = (3000 / options.duration.max(1)) as usize;
+        held = frames.iter().cloned().chain(std::iter::repeat_n(frames[frames.len() - 1].clone(), hold)).collect();
+        (&held[..], Save { once: false, ..options })
+    } else {
+        (frames, options)
+    };
     if !out.raw_only {
         std::fs::create_dir_all(&out.dir).expect("cannot create output directory");
         let band = crate::brand::band(name, frames[0].width as usize * options.scale);

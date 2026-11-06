@@ -11,9 +11,12 @@ use crate::pixel::{mix, Rgb};
 
 pub const REPO: &str = "eliorpom-cmd/lgtm.md";
 const MOTTO: &str = "✓ Looks good to README";
-const HEIGHT: usize = 20;
-const SIZE: f32 = 12.0;
-const PAD: f32 = 8.0;
+// Sizes in CSS pixels; the GIF is drawn at `HIDPI` times this so the text stays sharp on
+// high-density screens, where the README shows it at half its pixel size.
+const HIDPI: usize = crate::export::HIDPI;
+const HEIGHT: usize = 20 * HIDPI;
+const SIZE: f32 = 12.0 * HIDPI as f32;
+const PAD: f32 = 8.0 * HIDPI as f32;
 /// GitHub's dark page colour, so the band reads as a caption rather than part of the scene.
 const BACKGROUND: Rgb = [13, 17, 23];
 const QUIET: Rgb = [158, 166, 176];
@@ -33,7 +36,7 @@ fn caption(name: &str) -> String {
         "donut" => "Languages",
         "grass" => "Activity · 90 days",
         "cherry-tree" => "Activity · 90 days",
-        "forest" => "Weekly commits · 12 months",
+        "forest" => "Weekly contributions · 12 months",
         "fireworks" => "Merged PRs · 7 days",
         "fireworks-commits" => "Commits · 7 days",
         "records" => "Records · 12 months",
@@ -77,7 +80,7 @@ fn width(run: &Run) -> f32 {
     total
 }
 
-/// Blends `run` into the band, its left edge at `x`. Coverage is snapped to eight steps so
+/// Blends `run` into the band, its left edge at `x`. Coverage is snapped to sixteen steps so
 /// the text adds only a handful of colours to the GIF palette.
 fn draw(band: &mut [Rgb], band_width: usize, run: &Run, x: f32) {
     let scaled = run.font.as_scaled(PxScale::from(SIZE));
@@ -97,7 +100,7 @@ fn draw(band: &mut [Rgb], band_width: usize, run: &Run, x: f32) {
                 if px < 0 || py < 0 || px as usize >= band_width || py as usize >= HEIGHT {
                     return;
                 }
-                let step = (coverage.clamp(0.0, 1.0) * 8.0).round() / 8.0;
+                let step = (coverage.clamp(0.0, 1.0) * 16.0).round() / 16.0;
                 if step > 0.0 {
                     let at = py as usize * band_width + px as usize;
                     band[at] = mix(BACKGROUND, run.color, step as f64);
@@ -126,7 +129,7 @@ pub fn band(name: &str, band_width: usize) -> (usize, Vec<Rgb>) {
     let (lw, mw, rw) = (width(&left), width(&middle), width(&right));
     draw(&mut pixels, band_width, &right, full - PAD - rw);
     // The motto sits centred between the two ends, and only when it has room to breathe.
-    let gap = 16.0;
+    let gap = 16.0 * HIDPI as f32;
     let middle_x = (full - mw) / 2.0;
     let fits_centred = middle_x >= PAD + lw + gap && middle_x + mw <= full - PAD - rw - gap;
     if fits_centred {
