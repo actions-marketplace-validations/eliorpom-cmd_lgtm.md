@@ -444,7 +444,7 @@ fn drain_upper(
     let depth = |cell: Cell, rng: &mut Random| -> f64 {
         let (col, row) = (cell.0 as f64, cell.1 as f64);
         let mut wobble = 1.6 * (col * 0.55 + phases[0]).sin() + 1.1 * (col * 1.3 + row * 0.4 + phases[1]).sin();
-        wobble = wobble + (0.9 * (row * 0.8 + col * 0.3 + phases[2]).sin() + rng.uniform(-0.8, 0.8));
+        wobble += 0.9 * (row * 0.8 + col * 0.3 + phases[2]).sin() + rng.uniform(-0.8, 0.8);
         row + 0.45 * (cell.0.abs() as f64) + wobble
     };
     let mut deep: HashMap<usize, f64> = HashMap::new();
@@ -710,7 +710,7 @@ pub fn render(data: &Data) -> String {
         }
         // A slow glint slides down the glass once the sand rests.
         let sweep = (frame - pour_end - 8) as f64 / (hold as f64 * 0.6).max(1.0);
-        if 0.0 <= sweep && sweep <= 1.0 {
+        if (0.0..=1.0).contains(&sweep) {
             let gy = (TOP + 4) as f64 + sweep * (BOTTOM - TOP - 8) as f64;
             for k in 0..5 {
                 let y = py_round(gy) + k;

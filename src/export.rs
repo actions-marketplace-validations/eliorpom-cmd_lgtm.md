@@ -122,10 +122,7 @@ fn write_gif(path: &PathBuf, frames: &[Canvas], scale: usize, duration: u32, onc
         let (x0, y0, x1, y1) = if n == 0 {
             (0, 0, aw - 1, ah - 1)
         } else {
-            match changed_box(&indexed[n - 1], frame, aw, ah) {
-                Some(found) => found,
-                None => (0, 0, 0, 0),
-            }
+            changed_box(&indexed[n - 1], frame, aw, ah).unwrap_or_default()
         };
         let (bw, bh) = ((x1 - x0 + 1) * scale, (y1 - y0 + 1) * scale);
         let rows = if n == 0 { bh + band_h } else { bh };

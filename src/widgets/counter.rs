@@ -75,7 +75,7 @@ fn drum_positions(value: f64, digits: i64) -> Vec<f64> {
 }
 
 fn glyph_bit(glyph: &str, col: i64, row: i64) -> bool {
-    if !(0 <= col && col < 5 && 0 <= row && row < 7) {
+    if !((0..5).contains(&col) && (0..7).contains(&row)) {
         return false;
     }
     glyph.as_bytes()[(row * 5 + col) as usize] == b'1'
@@ -234,10 +234,10 @@ pub fn render(data: &Data) -> String {
             for x in WIN_X0..=WIN_X1 {
                 let diag = (x - WIN_X0) as f64 + (y - WIN_Y0) as f64 * 0.9;
                 let mut lit: Option<f64> = None;
-                if 0.0 <= sweep && sweep <= 1.0 {
+                if (0.0..=1.0).contains(&sweep) {
                     let pos = -30.0 + sweep * (WIN_X1 - WIN_X0 + 60) as f64;
                     let d = diag - pos;
-                    if (0.0 <= d && d < 6.0) || (0.0 <= d - 9.0 && d - 9.0 < 2.0) {
+                    if (0.0..6.0).contains(&d) || (0.0 <= d - 9.0 && d - 9.0 < 2.0) {
                         lit = Some(0.22);
                     }
                 }

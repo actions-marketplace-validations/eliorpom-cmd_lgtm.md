@@ -19,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       # Pin a release tag: a moving tag runs whatever code it points to on your account.
-      - uses: eliorpom-cmd/lgtm.md@v0.1.0
+      - uses: eliorpom-cmd/lgtm.md@v1.0.0
         with:
           # Optional: a token with read access to your repositories counts private activity.
           token: ${{ secrets.LGTM_MD_TOKEN || github.token }}

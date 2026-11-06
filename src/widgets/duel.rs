@@ -218,7 +218,7 @@ fn backdrop() -> Canvas {
         let start = rng.randrange(10, 120);
         for k in 0..length {
             let x = W / 2 + side * (start + k);
-            if 0 <= x && x < W && dither_on(x, y, 0.5 + 0.5 * (1.0 - k as f64 / length as f64)) {
+            if (0..W).contains(&x) && dither_on(x, y, 0.5 + 0.5 * (1.0 - k as f64 / length as f64)) {
                 let color = mix(canvas.get(x, y), WHITE, 0.12);
                 canvas.put(x, y, color);
             }
@@ -333,7 +333,7 @@ fn pixel_avatar(path: &str, colors: &Colors) -> Option<Vec<Rgb>> {
             let mut best: Option<(f64, Rgb)> = None;
             for c in &palette {
                 let d = (c[0] as f64 - r).powf(2.0) + (c[1] as f64 - g).powf(2.0) + (c[2] as f64 - b).powf(2.0);
-                if best.map_or(true, |(bd, _)| d < bd) {
+                if best.is_none_or(|(bd, _)| d < bd) {
                     best = Some((d, *c));
                 }
             }
@@ -385,7 +385,7 @@ fn median_cut(pixels: &[Rgb], colors: usize) -> Vec<Rgb> {
         let mut pick: Option<(usize, i64)> = None;
         for (i, b) in boxes.iter().enumerate() {
             let (range, _) = span(b);
-            if range > 0 && pick.map_or(true, |(_, r)| range > r) {
+            if range > 0 && pick.is_none_or(|(_, r)| range > r) {
                 pick = Some((i, range));
             }
         }
@@ -573,14 +573,8 @@ impl Camp {
     }
 }
 
-/// Renders the duel against the friend `login` from `data.friends` over `days` (7, 30 or 365).
-/// Output name as in Python: `duel-<login>`, with `-<days>` added when it is not 30.
-pub fn render(data: &Data, login: &str, days: i64) -> String {
-    let name = if days == 30 { format!("duel-{login}") } else { format!("duel-{login}-{days}") };
-    render_as(data, login, days, &name)
-}
-
-/// Same as `render`, written under the output name the user asked for.
+/// Renders the duel against the friend `login` from `data.friends` over `days` (7, 30 or 365),
+/// written under the output name the user asked for.
 pub fn render_as(data: &Data, login: &str, days: i64, name: &str) -> String {
     let period = period(days);
     let friend = data.friends.get(login).unwrap_or_else(|| panic!("no friend {login} in data.json"));
@@ -633,7 +627,7 @@ pub fn render_as(data: &Data, login: &str, days: i64, name: &str) -> String {
         let verdict = f >= VERDICT;
 
         // Centre lightning, crackling on a 4-frame beat, brighter at the slam and the verdict.
-        let slam = (5 <= f && f < SLAM) || (VERDICT <= f && f < VERDICT + 3);
+        let slam = (5..SLAM).contains(&f) || (VERDICT..VERDICT + 3).contains(&f);
         if slam || f % 4 == 0 || f % 4 == 1 {
             draw_bolt(&mut canvas, W / 2, 44, CHART_BASE, (f / 2) * 7 + 1, slam || f % 4 == 0);
         }
@@ -674,7 +668,7 @@ pub fn render_as(data: &Data, login: &str, days: i64, name: &str) -> String {
             let (bx0, bx1) = if is_left { LEFT_BAR } else { RIGHT_BAR };
             let value = shown[ci];
             let fill = if best != 0 { value as f64 / best as f64 } else { 0.0 };
-            let flash = VERDICT <= f && f < VERDICT + 2 && winner == Some(ci);
+            let flash = (VERDICT..VERDICT + 2).contains(&f) && winner == Some(ci);
             // The bars fill from the portrait towards the centre.
             draw_bar(&mut canvas, bx0, bx1, fill, camp.colors(), is_left, flash);
             // Total under the bar, name under the portrait.

@@ -1,12 +1,22 @@
-//! LGTM.md: pixel-art GitHub widgets, Rust port of the Python prototypes in the parent folder.
+//! LGTM.md: animated pixel-art widgets for a GitHub profile README.
 //!
 //! Usage: lgtm-md <data.json> [names...] [--out DIR] [--raw DIR] [--raw-only]
 //!        lgtm-md collect <login> [out.json] [friend...]
 //!        lgtm-md duel-logins <names...>   (rivals to collect for these widget names)
 //!        lgtm-md pycheck <cases.json>   (parity check of the Python primitives)
 
-// The shared toolkit is ported whole; widgets not yet ported will use the rest.
-#![allow(dead_code)]
+// The widgets were first drawn in Python, and the frames must match those prototypes pixel
+// for pixel: min/max chains, float comparisons and argument lists are kept as they were written
+// there, on purpose.
+#![allow(
+    clippy::manual_clamp,
+    clippy::neg_cmp_op_on_partial_ord,
+    clippy::too_many_arguments,
+    clippy::type_complexity,
+    clippy::needless_range_loop,
+    clippy::unnecessary_sort_by,
+    clippy::field_reassign_with_default
+)]
 
 mod brand;
 mod collect;
@@ -34,11 +44,10 @@ fn main() {
         // The rivals to collect for these widget names, once each (used by action.yml).
         let mut logins: Vec<String> = Vec::new();
         for name in std::env::args().skip(2) {
-            if let Some((login, _)) = widgets::parse_duel(&name) {
-                if !logins.contains(&login) {
+            if let Some((login, _)) = widgets::parse_duel(&name)
+                && !logins.contains(&login) {
                     logins.push(login);
                 }
-            }
         }
         for login in logins {
             println!("{login}");
@@ -81,12 +90,11 @@ fn main() {
                 catalog.iter().map(|(key, _)| *key).collect::<Vec<_>>().join(", "));
             std::process::exit(2);
         }
-        if let Some((login, _)) = widgets::parse_duel(name).filter(|_| !catalog.iter().any(|(key, _)| key == name)) {
-            if !data.friends.contains_key(&login) {
+        if let Some((login, _)) = widgets::parse_duel(name).filter(|_| !catalog.iter().any(|(key, _)| key == name))
+            && !data.friends.contains_key(&login) {
                 eprintln!("{name}: {login} is not in data.json; collect it with `lgtm-md collect <you> data.json {login}`");
                 std::process::exit(2);
             }
-        }
     }
     for name in &names {
         let started = std::time::Instant::now();

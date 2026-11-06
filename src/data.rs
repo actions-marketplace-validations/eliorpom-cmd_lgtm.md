@@ -25,6 +25,8 @@ pub struct Day {
 pub struct MergedPr {
     #[serde(default, deserialize_with = "nullable")]
     pub merged_at: String,
+    /// Kept in data.json for readers; no widget draws it.
+    #[allow(dead_code)]
     #[serde(default, deserialize_with = "nullable")]
     pub repo: String,
     pub language: Option<String>,
@@ -44,6 +46,8 @@ pub struct Language {
 #[derive(Deserialize, Clone, Debug, Default)]
 #[serde(default)]
 pub struct Followed {
+    /// Kept in data.json for readers; only the totals are drawn.
+    #[allow(dead_code)]
     #[serde(default, deserialize_with = "nullable")]
     pub login: String,
     #[serde(default, deserialize_with = "nullable")]
@@ -64,7 +68,8 @@ pub struct LanguageCount {
 #[derive(Deserialize, Clone, Debug, Default)]
 #[serde(default)]
 pub struct Month {
-    /// "YYYY-MM".
+    /// "YYYY-MM". Months come in order, so widgets go by position.
+    #[allow(dead_code)]
     #[serde(default, deserialize_with = "nullable")]
     pub month: String,
     pub languages: Vec<LanguageCount>,

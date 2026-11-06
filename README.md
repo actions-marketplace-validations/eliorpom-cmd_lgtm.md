@@ -32,7 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: eliorpom-cmd/lgtm.md@v0.1.0
+      - uses: eliorpom-cmd/lgtm.md@v1.0.0
         with:
           token: ${{ secrets.LGTM_MD_TOKEN || github.token }}
           widgets: |
@@ -160,7 +160,7 @@ The friend's side only uses public data. Duel as many friends as you like: `duel
 | `widgets` | every widget except duels | Widget names, separated by spaces or new lines. |
 | `output-dir` | `widgets` | Folder where the GIFs are written. |
 
-Pin a release tag such as `@v0.1.0` rather than a branch: a moving reference runs whatever code it points to, with your token.
+Pin a release tag such as `@v1.0.0` rather than a branch: a moving reference runs whatever code it points to, with your token.
 
 ## Run it on your computer
 

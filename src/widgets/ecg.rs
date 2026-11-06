@@ -60,7 +60,7 @@ const HEART: [&str; 7] = [".11.11.", "1221111", "1211111", "1111111", ".11111.",
 
 /// Screen area with rounded CRT corners.
 fn in_screen(x: i64, y: i64) -> bool {
-    if !(SX0 <= x && x <= SX1 && SY0 <= y && y <= SY1) {
+    if !((SX0..=SX1).contains(&x) && (SY0..=SY1).contains(&y)) {
         return false;
     }
     let r = 5;
@@ -375,14 +375,13 @@ fn draw_frame(scene: &Scene, frame: usize) -> Canvas {
         let level = ((strength * (PHOSPHOR.len() as f64 - 0.01)) as i64).min(PHOSPHOR.len() as i64 - 1) as usize;
         let day = py_floordiv(column, DAY_W);
         for &y in ys {
-            if let Some(best) = scene.best {
-                if day == best as i64 && y != BASE {
+            if let Some(best) = scene.best
+                && day == best as i64 && y != BASE {
                     // The best day's beats glow amber, like its name.
                     let ratio = (strength - 0.45) / 0.55 * 0.8 + 0.2;
                     emissive.insert((x, y), mix(AMBER_DIM, [255, 226, 160], ratio));
                     continue;
                 }
-            }
             emissive.insert((x, y), PHOSPHOR[level]);
         }
     }
@@ -437,7 +436,7 @@ fn draw_frame(scene: &Scene, frame: usize) -> Canvas {
     // The heart lights up for a moment each time the spot crosses an R peak.
     let lit = scene.peaks.iter().any(|&(peak, _)| {
         let d = head - (peak - TX0) as f64;
-        0.0 <= d && d < 7.0
+        (0.0..7.0).contains(&d)
     });
     let heart_color = if lit { PHOSPHOR[3] } else { GRID_MAJOR };
     let heart_core = if lit { SPOT } else { PHOSPHOR[0] };

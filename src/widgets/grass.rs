@@ -182,7 +182,7 @@ struct Firefly {
 /// `Layer.get`: `None` outside the image, the pixel otherwise.
 fn get(c: &Canvas, x: f64, y: f64) -> Option<Rgb> {
     let (x, y) = (py_round(x), py_round(y));
-    if 0 <= x && x < W && 0 <= y && y < H {
+    if (0..W).contains(&x) && (0..H).contains(&y) {
         Some(c.get(x, y))
     } else {
         None
@@ -278,11 +278,10 @@ fn draw_moon(c: &mut Canvas) {
                 }
             } else if 18.0 < dist && dist <= 34.0 {
                 let ratio = 1.0 - (dist - 18.0) / 16.0;
-                if ratio * 9.0 > BAYER[(y % 4) as usize][(x % 4) as usize] as f64 {
-                    if let Some(under) = get(c, x as f64, y as f64) {
+                if ratio * 9.0 > BAYER[(y % 4) as usize][(x % 4) as usize] as f64
+                    && let Some(under) = get(c, x as f64, y as f64) {
                         c.put(x, y, mix(under, MOON_HALO[1], 0.7));
                     }
-                }
             }
         }
     }
@@ -747,7 +746,7 @@ fn sprite_filled(rows: &[&str], dx: i64, dy: i64) -> bool {
     }
     rows.get(dy as usize)
         .and_then(|row| row.as_bytes().get(dx as usize))
-        .map_or(false, |&key| key != b'.')
+        .is_some_and(|&key| key != b'.')
 }
 
 fn draw_flowers(c: &mut Canvas, flowers: &[(i64, i64, Rgb, bool)]) {

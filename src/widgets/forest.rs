@@ -200,7 +200,7 @@ fn build_fir(h: i64, half_max: f64, palette: [Rgb; 3]) -> Rows {
                 let mut light = dx as f64 / 1.0f64.max(half) * 1.1 + lit_bonus - low_penalty;
                 // Shadow cast by the tier above, under its skirt.
                 let gap = (bottom + seg) - dy as f64;
-                if i != 0 && gap >= 0.0 && gap < 2.0 && (dx.abs() as f64) < half - 1.0 {
+                if i != 0 && (0.0..2.0).contains(&gap) && (dx.abs() as f64) < half - 1.0 {
                     light -= 0.7;
                 }
                 add(&mut rows, dx, dy, shade(palette, light, dx, dy));
@@ -397,11 +397,10 @@ fn paint_range(canvas: &mut Canvas, peaks: &[(i64, i64, f64)], faces: [Rgb; 2], 
                 if y == ridge_y && !lit {
                     color = mix(faces[0], faces[1], 0.5);
                 }
-                if let Some(snow_colors) = snow_colors {
-                    if y < top + snow + jag[((x * 3) % W) as usize] * 2 - py_imod(y - top, 3) {
+                if let Some(snow_colors) = snow_colors
+                    && y < top + snow + jag[((x * 3) % W) as usize] * 2 - py_imod(y - top, 3) {
                         color = if lit { snow_colors[1] } else { snow_colors[0] };
                     }
-                }
                 canvas.put(x, y, color);
             }
         }
@@ -572,11 +571,10 @@ pub fn render(data: &Data) -> String {
         }
     }
     let mut deer_x: Option<i64> = None;
-    if let Some((start, end)) = longest {
-        if end - start + 1 >= 4 {
+    if let Some((start, end)) = longest
+        && end - start + 1 >= 4 {
             deer_x = Some(week_x((start + end) / 2, weeks.len() as i64) - 7);
         }
-    }
 
     // A few fireflies over every clearing of three weeks or more.
     let mut flies: Vec<(f64, f64, i64)> = Vec::new();

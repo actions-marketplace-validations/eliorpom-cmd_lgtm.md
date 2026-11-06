@@ -134,7 +134,7 @@ fn draw_frame_and_velvet(canvas: &mut Canvas) {
             } else if depth == 1 {
                 value += if d_top == 1 || d_left == 1 { 1.1 } else { -0.6 };
             }
-            if d_bottom <= border - 1 || d_right <= border - 1 {
+            if d_bottom < border || d_right < border {
                 value -= 0.5;
             }
             canvas.put(x, y, ramp(&WOOD, value, x, y));
@@ -145,7 +145,7 @@ fn draw_frame_and_velvet(canvas: &mut Canvas) {
 fn plaque_shadow(canvas: &mut Canvas, x0: i64, y0: i64) {
     for y in y0 + 2..y0 + PLAQUE_H + 4 {
         for x in x0 + 2..x0 + PLAQUE_W + 3 {
-            let soft = x >= x0 + PLAQUE_W + 1 || y >= y0 + PLAQUE_H + 2;
+            let soft = x > x0 + PLAQUE_W || y >= y0 + PLAQUE_H + 2;
             if soft && !dither_on(x, y, 0.5) {
                 continue;
             }
@@ -159,7 +159,7 @@ fn glint_at(t: f64, index: i64) -> Option<f64> {
     let start = 0.06 + index as f64 * 0.13;
     let length = 0.2;
     let p = (t - start) / length;
-    if 0.0 <= p && p <= 1.0 { Some(p) } else { None }
+    if (0.0..=1.0).contains(&p) { Some(p) } else { None }
 }
 
 fn draw_plaque(canvas: &mut Canvas, x0: i64, y0: i64, plaque: &(String, String, String), t: f64, index: i64, screws_low: bool) {
@@ -263,8 +263,8 @@ fn draw_plaque(canvas: &mut Canvas, x0: i64, y0: i64, plaque: &(String, String, 
     }
 
     // A small four-point sparkle where the glint leaves the plaque.
-    if let Some(s) = sweep {
-        if 0.7 < s && s < 1.0 {
+    if let Some(s) = sweep
+        && 0.7 < s && s < 1.0 {
             let size: i64 = if s < 0.85 { 3 } else { 1 };
             let (sx, sy) = (x1 - 6, y0 + 5);
             canvas.put(sx, sy, SPARK);
@@ -274,7 +274,6 @@ fn draw_plaque(canvas: &mut Canvas, x0: i64, y0: i64, plaque: &(String, String, 
                 }
             }
         }
-    }
 }
 
 fn plaques_of(data: &Data) -> Vec<(String, String, String)> {

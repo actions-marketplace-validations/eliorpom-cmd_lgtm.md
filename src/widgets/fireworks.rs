@@ -508,7 +508,7 @@ fn draw_smoke(canvas: &mut Canvas, rocket: &Rocket, u: f64) {
     let cy = rocket.peak + 4.0 + 10.0 * s;
     let tint = mix(SMOKE, rocket.color, 0.18 * (1.0 - s));
     for y in (cy - radius * 0.7).floor() as i64..=(cy + radius * 0.7).ceil() as i64 {
-        if y >= WATER - 6 || y < 0 {
+        if !(0..WATER - 6).contains(&y) {
             continue;
         }
         for x in (cx - radius).floor() as i64..=(cx + radius).ceil() as i64 {
@@ -700,7 +700,7 @@ fn render_mode(data: &Data, commits: bool) -> String {
         // A fresh burst briefly lights the sky around it.
         for rocket in &rockets {
             let age = (py_mod(t - rocket.start, 1.0) - LAUNCH) * FRAMES as f64;
-            if 0.0 <= age && age < 8.0 {
+            if (0.0..8.0).contains(&age) {
                 sky_glow(&mut canvas, rocket, 1.0 - age / 8.0);
             }
         }

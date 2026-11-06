@@ -150,7 +150,7 @@ fn round1(x: f64) -> i64 {
 /// `draw` helpers: the Python `Layer` class rounds coordinates like `Canvas.put`.
 fn blend(canvas: &mut Canvas, x: f64, y: f64, color: Rgb, ratio: f64) {
     let (x, y) = (py_round(x), py_round(y));
-    if 0 <= x && x < W && 0 <= y && y < H {
+    if (0..W).contains(&x) && (0..H).contains(&y) {
         let under = canvas.get(x, y);
         canvas.put(x, y, mix(under, color, ratio));
     }
@@ -204,11 +204,10 @@ fn draw_sun(canvas: &mut Canvas) {
                 if (1.0 - (dist - sun_r) / 8.0) * 16.0 > bayer - 4.0 {
                     canvas.put(x, y, SUN_HALO[0]);
                 }
-            } else if sun_r + 8.0 < dist && dist <= sun_r + 30.0 {
-                if (1.0 - (dist - sun_r - 8.0) / 22.0) * 10.0 > bayer {
+            } else if sun_r + 8.0 < dist && dist <= sun_r + 30.0
+                && (1.0 - (dist - sun_r - 8.0) / 22.0) * 10.0 > bayer {
                     blend(canvas, x as f64, y as f64, SUN_HALO[1], 0.6);
                 }
-            }
         }
     }
     for y in SUN_Y - SUN_R..=SUN_Y + SUN_R {
@@ -432,7 +431,7 @@ impl Tree {
             // Gentle pull toward the sky: cherry branches reach up and out.
             let cosine = child_angle.cos();
             let sign = if cosine > 0.0 { -1.0 } else { 1.0 };
-            child_angle += 0.15 * cosine * sign * -1.0;
+            child_angle += -(0.15 * cosine * sign);
             let child_length = length * self.rng.uniform(0.6, 0.8);
             let child_bend = self.rng.uniform(-0.3, 0.3);
             self.grow(
@@ -613,11 +612,10 @@ fn draw_tree(canvas: &mut Canvas, tree: &Tree, mask: &mut HashSet<(i64, i64)>) {
                     continue;
                 }
                 let ratio = dist / reach;
-                if let Some((best_ratio, _)) = best.get(&(px, py)) {
-                    if *best_ratio <= ratio {
+                if let Some((best_ratio, _)) = best.get(&(px, py))
+                    && *best_ratio <= ratio {
                         continue;
                     }
-                }
                 let (nx, ny) = if dist != 0.0 { (vx / reach, vy / reach) } else { (0.0, 0.0) };
                 let along = p.s + vx * p.dx + vy * p.dy;
                 let across = vx * -p.dy + vy * p.dx;
@@ -626,7 +624,7 @@ fn draw_tree(canvas: &mut Canvas, tree: &Tree, mask: &mut HashSet<(i64, i64)>) {
         }
     }
     for ((px, py), (_, color)) in best {
-        if 0 <= px && px < W && 0 <= py && py < H {
+        if (0..W).contains(&px) && (0..H).contains(&py) {
             canvas.put(px, py, color);
             mask.insert((px, py));
         }

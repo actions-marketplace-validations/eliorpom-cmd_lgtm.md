@@ -204,7 +204,7 @@ fn icing_edges() -> (Vec<f64>, Vec<f64>) {
 fn dough_color(x: i64, y: i64, phi: f64, diffuse: f64) -> Rgb {
     // The pale band is thin and wavy, never a ruler-straight stripe.
     let wobble = 2.0 * py_radians((x * 11 + y * 5) as f64).sin();
-    let in_band = (80.0 + wobble <= phi && phi <= 100.0 + wobble) || (-100.0 <= phi && phi <= -82.0);
+    let in_band = (80.0 + wobble <= phi && phi <= 100.0 + wobble) || (-100.0..=-82.0).contains(&phi);
     let tones: &[Rgb] = if in_band { &BAND } else { &DOUGH };
     // Fried dough bounces a lot of warm light: lift the shadows.
     let level = (0.3 + 0.7 * diffuse) * ((tones.len() - 1) as f64);

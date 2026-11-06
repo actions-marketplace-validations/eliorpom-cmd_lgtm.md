@@ -253,11 +253,6 @@ pub fn dither_on(x: i64, y: i64, ratio: f64) -> bool {
     ratio * 16.0 > BAYER[y.rem_euclid(4) as usize][x.rem_euclid(4) as usize] as f64
 }
 
-pub fn ease(value: f64) -> f64 {
-    let value = 1.0f64.min(0.0f64.max(value));
-    1.0 - (1.0 - value).powf(3.0)
-}
-
 /// 0 to 1 on a fixed log scale, so quiet accounts really look quiet.
 pub fn log_level(count: i64, full: i64) -> f64 {
     if count > 0 { 1.0f64.min((count as f64).ln_1p() / (full as f64).ln_1p()) } else { 0.0 }

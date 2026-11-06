@@ -45,4 +45,8 @@ jobs:
           merge-multiple: true
       - env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "${{ github.ref_name }}" dist/* --repo "${{ github.repository }}" --title "${{ github.ref_name }}" --generate-notes
+          TAG: ${{ github.ref_name }}
+        # A tag with a dash (v1.0.0-rc.1) is published as a pre-release.
+        run: |
+          pre=""; [[ "$TAG" == *-* ]] && pre="--prerelease"
+          gh release create "$TAG" dist/* --repo "${{ github.repository }}" --title "$TAG" --generate-notes $pre

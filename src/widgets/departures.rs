@@ -250,7 +250,7 @@ fn draw_tile(canvas: &mut Canvas, tx: i64, ty: i64, old: Option<&Rows>, new: &Ro
                 for x in 1..TILE_W - 1 {
                     for dy in 0..2 {
                         let y = edge + dy;
-                        if HALF <= y && y < TILE_H - 1 {
+                        if (HALF..TILE_H - 1).contains(&y) {
                             let current = canvas.get(tx + x, ty + y);
                             canvas.put(tx + x, ty + y, mix(current, SHADOW, 0.6 - dy as f64 * 0.3));
                         }

@@ -52,7 +52,7 @@ pub fn parse_duel(name: &str) -> Option<(String, i64)> {
 pub fn find(catalog: &[(&'static str, Renderer)], name: &str) -> Option<Box<dyn Fn(&Data) -> String>> {
     if let Some((_, render)) = catalog.iter().find(|(key, _)| *key == name) {
         let render = *render;
-        return Some(Box::new(move |data| render(data)));
+        return Some(Box::new(render));
     }
     let (login, days) = parse_duel(name)?;
     let name = name.to_string();

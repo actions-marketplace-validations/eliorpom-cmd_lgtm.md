@@ -644,8 +644,8 @@ pub fn render(data: &Data) -> String {
         }
 
         // Once both towers stand, a dashed line carries the median height across to yours.
-        if line_age >= 0 {
-            if let Some(them) = &sims[1] {
+        if line_age >= 0
+            && let Some(them) = &sims[1] {
                 let level_y = GROUND - them.n * COURSE - 1;
                 let start = CENTERS[1] - BRICK_W / 2 - 1;
                 let end = CENTERS[0] - BRICK_W / 2;
@@ -663,7 +663,6 @@ pub fn render(data: &Data) -> String {
                     }
                 }
             }
-        }
 
         canvas.text_center(W as f64 / 2.0, 6.0, "LAST 12 MONTHS", [150, 150, 190], Font::F35, 2, None);
         canvas.text_center(W as f64 / 2.0, (H - 12) as f64, &footnote, [150, 140, 150], Font::F35, 2, None);
