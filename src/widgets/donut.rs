@@ -334,6 +334,18 @@ fn top_languages(data: &Data, count: usize) -> Vec<Language> {
         .collect()
 }
 
+/// Languages whose GitHub colours look alike get colours that can be told apart,
+/// the most used language keeping its own.
+fn with_distinct_colors(languages: Vec<Language>) -> Vec<Language> {
+    let ranked: Vec<(String, Rgb)> = languages.iter().map(|lang| (lang.name.clone(), color_of(lang))).collect();
+    let colors = crate::pixel::distinct_colors(&ranked);
+    languages
+        .into_iter()
+        .zip(colors)
+        .map(|(lang, (_, color))| Language { color: Some(crate::pixel::hex(color)), ..lang })
+        .collect()
+}
+
 fn color_of(lang: &Language) -> Rgb {
     rgb(lang.color.as_deref().expect("language without a colour"))
 }
@@ -422,7 +434,7 @@ fn draw(scene: &Scene, frame: usize) -> Canvas {
 }
 
 pub fn render(data: &Data) -> String {
-    let languages = top_languages(data, 5);
+    let languages = with_distinct_colors(top_languages(data, 5));
     let (cos_t, sin_t) = tilt();
     let (light, half) = lighting();
     let surface = build_surface(cos_t, sin_t, light, half);

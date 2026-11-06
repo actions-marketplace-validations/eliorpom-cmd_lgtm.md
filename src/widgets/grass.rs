@@ -617,10 +617,19 @@ fn top_languages(data: &Data) -> Vec<(Option<String>, f64)> {
     if total == 0.0 {
         total = 1.0;
     }
-    shown
+    let top: Vec<&&Language> = shown.iter().take(5).collect();
+    // Languages whose GitHub colours look alike get colours that can be told apart,
+    // the most used language keeping its own. Languages without a colour stay without one.
+    let ranked: Vec<(String, Rgb)> = top
         .iter()
-        .take(5)
-        .map(|language| (language.color.clone(), language.share / total))
+        .filter_map(|language| language.color.as_deref().map(|hex| (language.name.clone(), rgb(hex))))
+        .collect();
+    let mut distinct = crate::pixel::distinct_colors(&ranked).into_iter();
+    top.iter()
+        .map(|language| {
+            let color = language.color.as_ref().and_then(|_| distinct.next()).map(|(_, c)| crate::pixel::hex(c));
+            (color, language.share / total)
+        })
         .collect()
 }
 

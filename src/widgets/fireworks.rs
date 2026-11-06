@@ -2,6 +2,7 @@
 //! the last 7 days (`render`), or one rocket per N commits of the last 7 days (`render_commits`).
 //! Same draw order, same random draws, same float formulas as the Python.
 
+use std::collections::HashMap;
 use std::f64::consts::PI;
 
 use indexmap::IndexMap;
@@ -86,6 +87,20 @@ fn color_of(color: Option<&str>) -> Rgb {
     }
 }
 
+/// Languages ranked by use, each with a colour that can be told apart from the others:
+/// alike GitHub colours (Python and TypeScript...) are swapped, the most used keeping its own.
+fn palette(counts: &[(String, Rgb, i64)]) -> HashMap<String, Rgb> {
+    let mut ranked: Vec<&(String, Rgb, i64)> = counts.iter().collect();
+    ranked.sort_by(|a, b| b.2.cmp(&a.2));
+    let mut seen: Vec<(String, Rgb)> = Vec::new();
+    for (name, color, _) in ranked {
+        if !seen.iter().any(|(n, _)| n == name) {
+            seen.push((name.clone(), *color));
+        }
+    }
+    crate::pixel::distinct_colors(&seen).into_iter().collect()
+}
+
 /// Upper-cased, first ten characters: `lang.upper()[:10]`.
 fn upper10(text: &str) -> String {
     text.to_uppercase().chars().take(10).collect()
@@ -117,7 +132,7 @@ fn recent_prs(data: &Data) -> Vec<&MergedPr> {
 /// One shell per N commits of a language, N picked from round steps to keep at most 20 shells.
 /// A language's leftover commits (fewer than N) still fire, as a smaller burst sized by the share
 /// of N they stand for. Returns the shells (colour, size) and N.
-fn commit_shells(languages: &[LanguageCount]) -> (Vec<(Rgb, f64)>, i64) {
+fn commit_shells(languages: &[LanguageCount], colors: &HashMap<String, Rgb>) -> (Vec<(Rgb, f64)>, i64) {
     let mut active: Vec<&LanguageCount> = languages.iter().filter(|lang| lang.count > 0).collect();
     let step = COMMIT_STEPS
         .iter()
@@ -129,7 +144,7 @@ fn commit_shells(languages: &[LanguageCount]) -> (Vec<(Rgb, f64)>, i64) {
     let queues: Vec<Vec<(Rgb, f64)>> = active
         .iter()
         .map(|lang| {
-            let color = color_of(lang.color.as_deref());
+            let color = colors[&name_of(Some(&lang.name))];
             let (full, rest) = (lang.count / step, lang.count % step);
             let mut sizes = vec![1.0f64; full as usize];
             if rest > 0 {
@@ -574,10 +589,18 @@ fn render_mode(data: &Data, commits: bool) -> String {
     let mut tally: IndexMap<String, (Rgb, i64)> = IndexMap::new();
     let (shells, title, subtitle, name) = if commits {
         let languages = &data.commits_7d;
-        let (shells, step) = commit_shells(languages);
+        let colors = palette(
+            &languages
+                .iter()
+                .filter(|lang| lang.count > 0)
+                .map(|lang| (name_of(Some(&lang.name)), color_of(lang.color.as_deref()), lang.count))
+                .collect::<Vec<_>>(),
+        );
+        let (shells, step) = commit_shells(languages, &colors);
         // Later duplicates overwrite the value and keep the first position, as a Python dict does.
         for lang in languages.iter().filter(|lang| lang.count > 0) {
-            tally.insert(name_of(Some(&lang.name)), (color_of(lang.color.as_deref()), lang.count));
+            let name = name_of(Some(&lang.name));
+            tally.insert(name.clone(), (colors[&name], lang.count));
         }
         let count: i64 = languages.iter().map(|lang| lang.count).sum();
         let title = if count == 1 { format!("{count} COMMIT") } else { format!("{count} COMMITS") };
@@ -591,10 +614,17 @@ fn render_mode(data: &Data, commits: bool) -> String {
         (shells, title, subtitle, "fireworks-commits")
     } else {
         let prs = recent_prs(data);
-        let shells: Vec<(Rgb, f64)> = prs.iter().map(|pr| (color_of(pr.color.as_deref()), 1.0)).collect();
+        let mut counts: IndexMap<String, (Rgb, i64)> = IndexMap::new();
+        for pr in &prs {
+            let entry = counts.entry(name_of(pr.language.as_deref())).or_insert((color_of(pr.color.as_deref()), 0));
+            entry.1 += 1;
+        }
+        let colors = palette(&counts.iter().map(|(name, (color, n))| (name.clone(), *color, *n)).collect::<Vec<_>>());
+        let shells: Vec<(Rgb, f64)> =
+            prs.iter().map(|pr| (colors[&name_of(pr.language.as_deref())], 1.0)).collect();
         for pr in &prs {
             let name = name_of(pr.language.as_deref());
-            let color = color_of(pr.color.as_deref());
+            let color = colors[&name];
             tally.entry(name).or_insert((color, 0)).1 += 1;
         }
         let count = prs.len() as i64;

@@ -98,6 +98,11 @@ pub fn rgb(hex: &str) -> Rgb {
     [part(0), part(2), part(4)]
 }
 
+/// Inverse of `rgb`: `[53, 114, 165]` → `"#3572a5"`.
+pub fn hex(color: Rgb) -> String {
+    format!("#{:02x}{:02x}{:02x}", color[0], color[1], color[2])
+}
+
 /// `mix(a, b, ratio)`: per channel `round(x + (y - x) * ratio)`, half to even.
 pub fn mix(a: Rgb, b: Rgb, ratio: f64) -> Rgb {
     let channel = |i: usize| {
