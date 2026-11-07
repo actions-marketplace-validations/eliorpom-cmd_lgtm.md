@@ -741,7 +741,8 @@ function enterPane(back) {
   pane.classList.add("is-entering");
   pane.classList.toggle("from-left", back);
   pane.addEventListener("animationend", () => pane.classList.remove("is-entering", "from-left"), { once: true });
-  if (state.step === "check") buildMark($("#setup .done-mark"));
+  if (state.step === "check") { buildMark($("#setup .done-mark")); startRunCheck(); }
+  else stopRunCheck();
 }
 
 function move(delta) {
@@ -751,6 +752,144 @@ function move(delta) {
 }
 
 let opener = null;
+
+// Step 6 follows the workflow run through GitHub's public API, without a token: 60 requests an
+// hour per network, so it checks every 5 s for a minute, then every 10 s, and stops after 5 min.
+// Every way it can fail ends on a sentence and a link to the Actions tab, never on silence.
+const RUN = { fast: 5000, slow: 10000, fastFor: 60e3, max: 300e3, margin: 10 * 60e3, netTries: 3 };
+let runPoll = null;     // the check in progress, or null
+let runDone = "";       // "owner/repo" of the last finished check, so reopening step 6 keeps its result
+
+function runKey() {
+  const t = targetInfo();
+  return t.ok ? `${t.owner}/${t.repo}` : "";
+}
+
+function actionsLink(text = "Actions tab ↗") {
+  const t = targetInfo();
+  return `<a class="text-link" href="https://github.com/${t.owner}/${t.repo}/actions" target="_blank" rel="noopener">${text}</a>`;
+}
+
+// state: waiting, running, done, failed, hidden, limit, error, timeout.
+function setRun(kind, detail = "") {
+  const labels = {
+    waiting: "Waiting for the first run",
+    running: "Running",
+    done: "Done ✓",
+    failed: "Failed",
+    hidden: "Can't see the run from here",
+    limit: "Check limit reached",
+    error: "Can't reach GitHub",
+    timeout: "Still waiting after 5 minutes",
+  };
+  $("#run").dataset.state = kind;
+  $("#run-text").textContent = labels[kind];
+  $("#run-detail").innerHTML = detail;
+  $("#run-detail").hidden = !detail;
+  const titles = {
+    done: ["Your widgets are ready", "Here they are, drawn from your own activity by the run that just finished."],
+    failed: ["The first run failed", "Open the run to read its log. The tips below list the usual causes."],
+  };
+  const [title, help] = titles[kind] || ["Your widgets are on their way", "The first run takes about a minute. This page follows it for you."];
+  $("#pane-check").textContent = title;
+  $("#check-help").textContent = help;
+}
+
+function stopRunCheck() {
+  if (runPoll) clearTimeout(runPoll.timer);
+  runPoll = null;
+}
+
+function startRunCheck() {
+  const key = runKey();
+  if (!key || runDone === key || (runPoll && runPoll.key === key)) return;
+  stopRunCheck();
+  $("#run-readme").hidden = true;
+  // A run created a little before "I committed it" is still this commit's run.
+  const since = (state.committedAt || Date.now() - 30 * 60e3) - RUN.margin;
+  runPoll = { key, since, t0: Date.now(), timer: 0, netErrors: 0 };
+  setRun("waiting", "GitHub starts it a few seconds after your commit.");
+  checkRun(runPoll);
+}
+
+async function checkRun(poll) {
+  const [owner, repo] = poll.key.split("/");
+  const again = () => {
+    if (runPoll !== poll) return;
+    const spent = Date.now() - poll.t0;
+    if (spent >= RUN.max) {
+      stopRunCheck();
+      return setRun("timeout", `The run may be queued on GitHub's side. Follow it in the ${actionsLink()}.`);
+    }
+    poll.timer = setTimeout(() => checkRun(poll), spent < RUN.fastFor ? RUN.fast : RUN.slow);
+  };
+  let res;
+  try {
+    res = await fetch(`https://api.github.com/repos/${owner}/${repo}/actions/workflows/lgtm-md.yml/runs?per_page=1`, { headers: { Accept: "application/vnd.github+json" }, cache: "no-store" });
+  } catch {
+    if (runPoll !== poll) return;
+    if (++poll.netErrors >= RUN.netTries) {
+      stopRunCheck();
+      return setRun("error", `Check your connection, then follow the run in the ${actionsLink()}.`);
+    }
+    return again();
+  }
+  if (runPoll !== poll) return;
+  poll.netErrors = 0;
+  if (res.status === 403 || res.status === 429) {
+    stopRunCheck();
+    return setRun("limit", `GitHub lets a page check 60 times an hour from one network without signing in. Follow the run in the ${actionsLink()}.`);
+  }
+  if (res.status === 404) {
+    // Either the workflow file is not on the default branch yet, or the repository is private.
+    setRun("hidden", state.mode === "project"
+      ? `The repository is private, or the workflow isn't committed yet. A private repository's runs are only visible in its ${actionsLink()}.`
+      : `The workflow isn't committed yet, or the repository is private. This page keeps checking; you can also look at the ${actionsLink()}.`);
+    return again();
+  }
+  if (!res.ok) {
+    setRun("error", `GitHub answered with an error (${res.status}). This page keeps checking; you can also look at the ${actionsLink()}.`);
+    return again();
+  }
+  let run;
+  try { run = (await res.json()).workflow_runs?.[0]; } catch { run = null; }
+  if (runPoll !== poll) return;
+  const link = (text) => (run && /^https:\/\/github\.com\//.test(run.html_url) ? `<a class="text-link" href="${esc(run.html_url)}" target="_blank" rel="noopener">${text}</a>` : actionsLink(text));
+  if (!run || Date.parse(run.created_at) < poll.since) {
+    setRun("waiting", "GitHub starts it a few seconds after your commit.");
+    return again();
+  }
+  if (run.status !== "completed") {
+    setRun("running", `Drawing your widgets. ${link("Watch the run ↗")}`);
+    return again();
+  }
+  stopRunCheck();
+  if (run.conclusion === "success") {
+    runDone = poll.key;
+    setRun("done");
+    return showRealWidgets(owner, repo, run.id);
+  }
+  setRun("failed", `The run stopped with an error; its log says why. ${link("Open the run ↗")}`);
+}
+
+// The visitor's own GIFs, straight from their repository, in a README preview.
+function showRealWidgets(owner, repo, runId) {
+  const project = state.mode === "project";
+  const base = `https://raw.githubusercontent.com/${owner}/${repo}/${project ? "lgtm-md" : "HEAD/widgets"}/`;
+  $("#run-path").textContent = project ? `${owner} / ${repo} / README.md` : `${owner} / README.md`;
+  const list = activeWidgets();
+  const body = $("#run-body");
+  body.innerHTML = `<p>${list.map((w) => `<img src="${base}${actionName(w)}.gif?t=${encodeURIComponent(runId)}" alt="${esc(w.alt)}" width="${w.width}">`).join("")}</p>`;
+  let missing = 0;
+  for (const img of body.querySelectorAll("img")) {
+    img.addEventListener("error", () => {
+      img.remove();
+      if (++missing === 1) body.insertAdjacentHTML("beforeend", `<p class="run-missing">Some images aren't served yet: GitHub can take a minute after the run. They will show in your README.</p>`);
+    }, { once: true });
+  }
+  $("#run-readme").hidden = false;
+  setTheme(state.theme);
+}
 
 // README background of the previews: GitHub's dark or light theme. Remembered on this device only.
 function loadTheme() {
@@ -827,12 +966,13 @@ function openSetup(from) {
   dialog.showModal();
   update();
   $("#cfg-body").scrollTop = 0;
-  if (state.step === "check") buildMark($("#setup .done-mark"));
+  if (state.step === "check") { buildMark($("#setup .done-mark")); startRunCheck(); }
   document.getElementById(`pane-${state.step}`).focus({ preventScroll: true });
 }
 
 function onClose() {
   state.open = false;
+  stopRunCheck();
   document.documentElement.classList.remove("modal-open");
   saveUrl();
   if (opener && document.contains(opener)) opener.focus();
@@ -1242,7 +1382,10 @@ function init() {
       renderMini.armed = true;
       return update();
     }
-    if (e.target.closest("#next")) return state.step === visibleSteps().at(-1).key ? dialog.close() : move(1);
+    if (e.target.closest("#next")) {
+      if (state.step === "workflow") state.committedAt = Date.now();
+      return state.step === visibleSteps().at(-1).key ? dialog.close() : move(1);
+    }
     if (e.target.closest("#back")) return move(-1);
     if (e.target.closest("#skip-token")) return move(1);
   });
