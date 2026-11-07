@@ -80,8 +80,9 @@ h3 { font-size: 22px; line-height: 1.25; letter-spacing: -0.02em; }
 .grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-24); }
 .card { display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line); border-radius: var(--s-16); overflow: hidden; box-shadow: var(--depth); transition: border-color 180ms ease; }
 .card:hover { border-color: var(--line-2); }
-.card-media { position: relative; aspect-ratio: 16 / 10; margin: var(--s-8); border-radius: var(--s-8); background: var(--gh-bg); }
-.card-media img { position: absolute; inset: var(--s-16); width: calc(100% - 32px); height: calc(100% - 32px); object-fit: contain; }
+.card-media { position: relative; aspect-ratio: 2 / 1; margin: var(--s-8); border-radius: var(--s-8); background: var(--gh-bg); }
+/* Most widgets are about 2:1, so they fill the thumbnail; the others sit centred in it. */
+.card-media img { position: absolute; inset: var(--s-12); width: calc(100% - 24px); height: calc(100% - 24px); object-fit: contain; }
 .card-body { display: flex; align-items: flex-start; gap: var(--s-16); padding: var(--s-8) var(--s-16) var(--s-24); flex: 1; }
 .card-name { font-size: 20px; letter-spacing: -0.02em; }
 .card-id { margin-top: var(--s-4); font: 400 12px/1.4 var(--mono); color: var(--faint); }
@@ -113,7 +114,7 @@ h3 { font-size: 22px; line-height: 1.25; letter-spacing: -0.02em; }
 .ln { display: grid; grid-template-columns: 44px minmax(0, 1fr); column-gap: var(--s-16); padding-right: var(--s-16); counter-increment: line; }
 .ln::before { content: counter(line); text-align: right; color: var(--gh-faint); user-select: none; }
 /* Wrapped lines hang under their own indentation plus four columns; URLs never break. */
-.lc { white-space: pre-wrap; overflow-wrap: normal; word-break: normal; padding-left: calc(var(--i, 0ch) + 4ch); text-indent: calc(-1 * (var(--i, 0ch) + 4ch)); }
+.lc { --hang: 4ch; white-space: pre-wrap; overflow-wrap: normal; word-break: normal; padding-left: calc(var(--i, 0ch) + var(--hang)); text-indent: calc(-1 * (var(--i, 0ch) + var(--hang))); }
 .ln.is-new { overflow: hidden; animation: line-in 240ms var(--ease) backwards, line-mark 1200ms ease-out both; }
 @keyframes line-in { from { max-height: 0; opacity: 0; } to { max-height: 12em; opacity: 1; } }
 @keyframes line-mark { from { box-shadow: inset 2px 0 0 var(--green); background: rgba(63, 185, 80, 0.08); } to { box-shadow: inset 2px 0 0 rgba(63, 185, 80, 0); background: transparent; } }
@@ -191,6 +192,7 @@ h3 { font-size: 22px; line-height: 1.25; letter-spacing: -0.02em; }
 
 .eyebrow { display: inline-flex; align-items: center; gap: var(--s-12); font: 500 12px/1 var(--sans); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: var(--s-32); }
 .dot { width: 6px; height: 6px; background: var(--green); }
+.eyebrow [data-version] { text-transform: none; }
 .lead { margin-top: var(--s-24); font-size: 20px; line-height: 1.5; max-width: 30em; }
 .actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-24) var(--s-32); margin-top: var(--s-32); }
 .used { display: flex; align-items: center; gap: var(--s-12); font-size: 14px; }
@@ -316,6 +318,9 @@ html.modal-open { overflow: hidden; }
   .lead { font-size: 18px; }
   .sec { margin-top: var(--s-64); }
   .sec-head p { font-size: 18px; }
+  /* Footer: the logo on its own line, the links under it. */
+  .foot .logo { flex-basis: 100%; margin-bottom: var(--s-4); }
+  .foot-in { gap: var(--s-12) var(--s-24); }
   /* Gallery becomes a swipeable strip. */
   .grid { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: var(--gut); gap: var(--s-12); margin: 0 calc(-1 * var(--gut)); padding: 0 var(--gut) var(--s-8); scrollbar-width: none; }
   .card { flex: 0 0 84vw; scroll-snap-align: start; }
@@ -328,7 +333,9 @@ html.modal-open { overflow: hidden; }
   .pane-title { font-size: 26px; }
   .picks { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-8); }
   .picked-count { margin-left: 0; }
-  .ln { grid-template-columns: 28px minmax(0, 1fr); column-gap: var(--s-8); }
+  /* Narrower numbers and a two-column hang leave room for a whole URL on one line. */
+  .ln { grid-template-columns: 16px minmax(0, 1fr); column-gap: var(--s-8); padding-right: var(--s-8); }
+  .lc { --hang: 2ch; }
   .gh-code { font-size: 12px; }
   .strip-row img { height: 72px; }
   .facts { grid-template-columns: minmax(0, 1fr); gap: 0; margin-top: var(--s-64); }

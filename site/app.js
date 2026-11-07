@@ -240,9 +240,15 @@ function highlightHtml(line) {
     out += esc(line.slice(last, m.index));
     const tok = m[0];
     const cls = tok.startsWith("<!--") ? "t-com" : tok[0] === "<" || tok.endsWith(">") ? "t-tag" : tok[0] === '"' ? "t-str" : "t-attr";
+    // Narrow screens may wrap before a tag that follows another one, between = and its value,
+    // <wbr> adds no text, so a copy of the selection stays the same.
+    const prev = line[m.index - 1];
+    if ((cls === "t-tag" && tok[0] === "<" && prev && prev !== " ") || (cls === "t-str" && prev === "=")) out += "<wbr>";
     // A quoted URL never wraps, so it can't break at a hyphen.
     out += span(cls === "t-str" && tok.includes("://") ? "t-str t-url" : cls, tok);
     last = m.index + tok.length;
+    // ...and between a tag and the text that follows it.
+    if (tok.endsWith(">") && line[last] && line[last] !== " " && line[last] !== "<") out += "<wbr>";
   }
   return out + esc(line.slice(last));
 }
