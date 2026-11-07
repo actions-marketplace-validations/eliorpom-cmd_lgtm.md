@@ -242,8 +242,30 @@
     </div>
   </section>
 
-  <!-- Comparison table, filled in later. -->
-  <section id="compare" hidden></section>
+  <section class="wrap sec" id="compare">
+    <p class="sec-label"><span class="sec-num"></span>Compared</p>
+    <div class="sec-head">
+      <h2>How it compares</h2>
+      <p>What each project documents in its README, read on 7 November 2026.</p>
+    </div>
+    <div class="table-wrap">
+      <table class="compare">
+        <thead>
+          <tr><th scope="col"></th><th scope="col">LGTM.md</th><th scope="col"><a href="https://github.com/anuraghazra/github-readme-stats">github-readme-stats</a></th><th scope="col"><a href="https://github.com/Platane/snk">snk</a></th><th scope="col"><a href="https://github.com/DenverCoder1/github-readme-streak-stats">readme-streak-stats</a></th></tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">Runs on</th><td>Your GitHub Actions</td><td>A public instance, your own instance or your Actions</td><td>Your GitHub Actions</td><td>A public endpoint, your own instance or your Actions</td></tr>
+          <tr><th scope="row">Output</th><td>Animated GIF</td><td>SVG cards</td><td>Animated SVG or GIF</td><td>SVG, PNG or JSON</td></tr>
+          <tr><th scope="row">Private activity</th><td>With a read-only token</td><td>With your own token on your own instance or Action</td><td>Not documented</td><td>With your own token in your Action</td></tr>
+          <tr><th scope="row">Refresh</th><td>Every night</td><td>Cached 24 h or more on the public instance</td><td>On your schedule</td><td>On your schedule in an Action</td></tr>
+          <tr><th scope="row">Widgets</th><td>14 animated scenes</td><td>5 card types</td><td>1 snake</td><td>1 streak card</td></tr>
+          <tr><th scope="row">Project README</th><td>Yes, 12 widgets</td><td>Repository pin card</td><td>Not documented</td><td>Not documented</td></tr>
+          <tr><th scope="row">License</th><td>MIT</td><td>MIT</td><td>Not documented</td><td>MIT</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="table-note">“Not documented” means the README doesn’t say, not that the feature is missing. A widget count compares different things: a card, a snake and an animated scene.</p>
+  </section>
 
   <section class="wrap closing-wrap">
     <div class="field-panel closing">
