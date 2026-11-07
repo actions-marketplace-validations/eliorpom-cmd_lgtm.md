@@ -278,17 +278,14 @@ function renderCode(el, text, lang) {
 }
 function toast(text) {
   const el = $("#toast");
-  // A modal dialog sits in the top layer: the toast moves inside it to stay visible.
-  const dialog = $("#setup");
-  const host = dialog && dialog.open ? dialog : document.body;
-  if (el.parentElement !== host) host.appendChild(el);
   el.textContent = text;
   el.classList.add("show");
   clearTimeout(toast.timer);
   toast.timer = setTimeout(() => el.classList.remove("show"), 1600);
 }
 
-async function copy(text) {
+// The button that was clicked says "Copied" for a moment; the toast is the fallback.
+async function copy(text, button) {
   if (!text) return;
   try {
     await navigator.clipboard.writeText(text);
@@ -304,8 +301,16 @@ async function copy(text) {
     document.execCommand("copy");
     ta.remove();
   }
-  toast("Copied");
+  if (!button) return toast("Copied");
+  if (!button.dataset.label) button.dataset.label = button.innerHTML;
+  button.innerHTML = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Copied';
+  button.classList.add("is-done");
+  clearTimeout(button.timer);
+  button.timer = setTimeout(() => { button.innerHTML = button.dataset.label; button.classList.remove("is-done"); }, 1600);
+  toast.live("Copied");
 }
+// Screen readers hear it through a live region inside the dialog: the page behind a modal is inert.
+toast.live = (text) => { const el = $("#cfg-live") || $("#toast"); el.textContent = ""; setTimeout(() => { el.textContent = text; }, 50); };
 // Live star count, cached for an hour. On any failure, or at zero, the count stays hidden.
 async function loadStars() {
   const el = $("#star-count");
@@ -628,7 +633,7 @@ function init() {
       return;
     }
     const copyBtn = e.target.closest(".copy");
-    if (copyBtn && !copyBtn.disabled) return copy(activeWidgets().length ? $("#" + copyBtn.dataset.copy).dataset.raw : "");
+    if (copyBtn && !copyBtn.disabled) return copy(activeWidgets().length ? $("#" + copyBtn.dataset.copy).dataset.raw : "", copyBtn);
     if (e.target.closest("#pick-all")) {
       const all = WIDGETS.filter(allowed);
       const full = all.every((w) => state.picked.has(w.id));

@@ -184,8 +184,9 @@ h3 { font-size: 22px; line-height: 1.25; letter-spacing: -0.02em; }
 
 /* Setup dialog: one question per screen in a centred column, wider only for the widget grid. */
 html.modal-open { overflow: hidden; }
-.cfg { width: min(560px, calc(100% - 48px)); max-width: none; height: auto; max-height: calc(100dvh - 64px); padding: 0; border: 1px solid var(--line-2); border-radius: 20px; background: var(--panel); color: var(--muted); box-shadow: var(--depth), 0 40px 120px -24px rgba(0, 0, 0, 0.8); overflow: hidden; }
+.cfg { width: min(560px, calc(100% - 48px)); max-width: none; height: fit-content; max-height: calc(100dvh - 64px); padding: 0; border: 1px solid var(--line-2); border-radius: 20px; background: var(--panel); color: var(--muted); box-shadow: var(--depth), 0 40px 120px -24px rgba(0, 0, 0, 0.8); overflow: hidden; }
 .cfg.is-wide { width: min(880px, calc(100% - 48px)); }
+.cfg:focus, .cfg:focus-visible { outline: none; }
 .cfg[open] { display: flex; animation: cfg-in 240ms var(--ease); }
 .cfg::backdrop { background: rgba(4, 5, 7, 0.62); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
 @keyframes cfg-in { from { opacity: 0; transform: translateY(8px) scale(0.99); } to { opacity: 1; transform: none; } }
@@ -215,8 +216,8 @@ html.modal-open { overflow: hidden; }
 .picks { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s-12); }
 .pick { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: stretch; gap: var(--s-8); padding: var(--s-8) var(--s-8) var(--s-12); border: 1px solid var(--line-2); border-radius: var(--s-12); background: var(--panel-2); color: var(--text); text-align: left; font: 500 14px/1.3 var(--sans); cursor: pointer; transition: border-color 180ms ease, background-color 180ms ease; }
 .pick:hover { border-color: var(--faint); }
-.pick-media { display: block; aspect-ratio: 16 / 10; border-radius: var(--s-8); background: var(--gh-bg); padding: var(--s-8); }
-.pick-media img { width: 100%; height: 100%; object-fit: contain; }
+.pick-media { position: relative; display: block; aspect-ratio: 16 / 10; border-radius: var(--s-8); background: var(--gh-bg); }
+.pick-media img { position: absolute; inset: var(--s-8); width: calc(100% - 16px); height: calc(100% - 16px); object-fit: contain; }
 .pick-name { padding: 0 var(--s-4); }
 .pick-note { padding: 0 var(--s-4); font-size: 12px; font-weight: 400; color: var(--faint); }
 .pick-note:empty { display: none; }
