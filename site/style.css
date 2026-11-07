@@ -85,6 +85,13 @@ h3 { font-size: 22px; line-height: 1.25; letter-spacing: -0.02em; }
 /* Every widget is contained and centred in the same 2:1 area; narrow ones get side margins of the same colour. */
 .card-media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; transition: opacity 220ms ease; }
 .card-media.is-padded img { inset: 6% 4%; width: 92%; height: 88%; }
+.card-media .card-gif { opacity: 0; transition: none; }
+.card-media .card-gif.is-on { opacity: 1; }
+.card { position: relative; }
+/* The name's button covers the whole card, so the card opens its details from anywhere. */
+.card-hit { all: unset; cursor: pointer; }
+.card-hit::after { content: ""; position: absolute; inset: 0; z-index: 2; border-radius: 14px; }
+.card:has(.card-hit:focus-visible) { outline: 2px solid var(--text); outline-offset: 3px; }
 .card-fx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .card.is-assembling .card-media img { opacity: 0; }
 .card-body { display: flex; flex-direction: column; flex: 1; padding: var(--s-16) var(--s-16) var(--s-16); }

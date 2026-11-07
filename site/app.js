@@ -382,10 +382,10 @@ function renderGallery() {
     const padded = Math.abs(w.w / w.h / 2 - 1) > 0.12;
     return `<li class="card" data-cat="${CATEGORY[w.id]}" data-id="${w.id}">
       <div class="card-media${padded ? " is-padded" : ""}">
-        <img src="widgets/${w.file || w.id}.gif" alt="${esc(w.alt)}" width="${w.w}" height="${w.h}" loading="lazy" decoding="async">
+        <img class="card-still" src="stills/${w.file || w.id}.webp" alt="${esc(w.alt)}" width="${w.w}" height="${w.h}" loading="lazy" decoding="async">
       </div>
       <div class="card-body">
-        <h3 class="card-name">${esc(w.name)}</h3>
+        <h3 class="card-name"><button class="card-hit" type="button" data-detail="${w.id}" aria-haspopup="dialog">${esc(w.name)}</button></h3>
         <p class="card-id">${id}</p>
         <p class="card-desc">${esc(w.desc)}</p>
         <p class="card-tags"><span class="tag">${CATEGORY[w.id]}</span>${w.project ? "" : '<span class="tag quiet">Profile only</span>'}</p>
@@ -813,7 +813,7 @@ function galleryIntro() {
   if (reducedMotion() || !("IntersectionObserver" in window)) return;
   const cards = $$(".card");
   for (const c of cards) c.classList.add("is-assembling");
-  const show = (card) => card.classList.remove("is-assembling");
+  const show = (card) => { card.classList.remove("is-assembling"); galleryMotion.built?.(card); };
   const runs = new Set();
   const queue = [];
   let lastStart = 0;
@@ -821,10 +821,10 @@ function galleryIntro() {
   const startCard = async (card) => {
     const w = BY_ID.get(card.dataset.id);
     const media = card.querySelector(".card-media");
-    const img = media.querySelector("img");
+    const img = media.querySelector(".card-still");
     let still;
     try {
-      still = await Promise.race([loadImage(`stills/${w.file || w.id}.png`), new Promise((_, r) => setTimeout(r, 1500))]);
+      still = await Promise.race([loadImage(`stills/${w.file || w.id}.webp`), new Promise((_, r) => setTimeout(r, 1500))]);
     } catch { return show(card); }
     if (!card.classList.contains("is-assembling") || card.hidden) return show(card);
     // The GIF is contained in its box: the build covers exactly the drawn image.
@@ -869,6 +869,38 @@ function galleryIntro() {
     for (const c of queue) show(c);
     queue.length = 0;
   });
+}
+
+// The gallery shows still images (about 125 KB in all, instead of 10 MB of GIFs). A card plays its
+// GIF while the pointer is over it or it has the focus; on touch screens, while it is on screen.
+function galleryMotion() {
+  const play = (card) => {
+    if (card.querySelector(".card-gif")) return;
+    const w = BY_ID.get(card.dataset.id);
+    const gif = new Image();
+    gif.className = "card-gif";
+    gif.alt = "";
+    gif.decoding = "async";
+    gif.onload = () => gif.classList.add("is-on");
+    gif.src = `widgets/${w.file || w.id}.gif`;
+    card.querySelector(".card-media").appendChild(gif);
+  };
+  const pause = (card) => card.querySelector(".card-gif")?.remove();
+  const grid = $("#grid");
+  grid.addEventListener("pointerover", (e) => { const c = e.target.closest(".card"); if (c && e.pointerType === "mouse") play(c); });
+  grid.addEventListener("pointerout", (e) => { const c = e.target.closest(".card"); if (c && e.pointerType === "mouse" && !c.contains(e.relatedTarget) && !c.contains(document.activeElement)) pause(c); });
+  grid.addEventListener("focusin", (e) => { const c = e.target.closest(".card"); if (c) play(c); });
+  grid.addEventListener("focusout", (e) => { const c = e.target.closest(".card"); if (c && !c.contains(e.relatedTarget) && !c.matches(":hover")) pause(c); });
+  if (!matchMedia("(hover: none)").matches || reducedMotion() || !("IntersectionObserver" in window)) return;
+  const io = new IntersectionObserver((entries) => {
+    for (const e of entries) e.isIntersecting && !e.target.classList.contains("is-assembling") ? play(e.target) : pause(e.target);
+  }, { threshold: 0.6 });
+  for (const c of $$(".card")) io.observe(c);
+  // A card that was still assembling when it came into view starts playing once it is built.
+  galleryMotion.built = (card) => {
+    const r = card.getBoundingClientRect();
+    if (r.left >= 0 && r.right <= innerWidth && r.top < innerHeight && r.bottom > 0) play(card);
+  };
 }
 
 // Pixel marks that build themselves: the 16×16 mark is split into one rect per grid pixel, each
@@ -932,6 +964,7 @@ function init() {
 
   renderGallery();
   galleryIntro();
+  galleryMotion();
   closingIntro();
   renderPicks();
   const open = loadUrl();
