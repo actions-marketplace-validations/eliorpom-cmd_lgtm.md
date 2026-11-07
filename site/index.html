@@ -153,7 +153,14 @@
           <span class="picked-count" id="picked-count">None selected yet</span>
           <button class="pill-btn small ghost" id="pick-all" type="button">Select all</button>
         </div>
-        <ul class="picks" id="picks"></ul>
+        <div class="pick-layout">
+          <ul class="picks" id="picks"></ul>
+          <aside class="mini gh" aria-label="Your README with the picked widgets">
+            <p class="mini-head" id="mini-path">your-login / README.md</p>
+            <div class="mini-body" id="mini-body"></div>
+            <p class="mini-empty" id="mini-empty">Picked widgets show here.</p>
+          </aside>
+        </div>
       </section>
 
       <section class="pane" data-pane="target" aria-labelledby="pane-target" hidden>
@@ -286,6 +293,7 @@
       </section>
     </div>
 
+    <canvas class="fly-fx" id="fly-fx" aria-hidden="true"></canvas>
     <footer class="cfg-foot">
       <button class="pill-btn wide" type="button" id="next" aria-describedby="cfg-reason">Continue</button>
       <p class="cfg-reason" id="cfg-reason" aria-live="polite"></p>

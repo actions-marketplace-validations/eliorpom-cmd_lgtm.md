@@ -466,11 +466,112 @@ function renderGallery() {
 function renderPicks() {
   $("#picks").innerHTML = WIDGETS.map((w) => `
     <li><button class="pick" type="button" data-id="${w.id}" aria-pressed="false">
-      <span class="pick-media"><img src="widgets/${w.file || w.id}.gif" alt="" width="${w.w}" height="${w.h}" loading="lazy" decoding="async"></span>
+      <span class="pick-media"><img src="stills/${w.file || w.id}.webp" alt="" width="${w.w}" height="${w.h}" loading="lazy" decoding="async"></span>
       <span class="pick-name">${esc(w.name)}</span>
       <span class="pick-note" id="note-${w.id}"></span>
       <span class="pick-check" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
     </button></li>`).join("");
+}
+
+// Step 1's mini README: the picked widgets at their README widths, as still images. A widget that
+// was just picked flies in from its thumbnail as pixel blocks; an unpicked one leaves.
+function renderMini(t) {
+  const body = $("#mini-body");
+  if (!body) return;
+  // Phones show only the last part: the owner goes first.
+  $("#mini-path").innerHTML = `<span class="mini-owner">${esc(t.owner)} / </span>${state.mode === "project" ? esc(t.repo) : "README.md"}`;
+  const list = pickedWidgets();
+  const want = new Set(list.map((w) => w.id));
+  for (const img of [...body.querySelectorAll("img")]) if (!want.has(img.dataset.id)) img.remove();
+  const fresh = [];
+  list.forEach((w, i) => {
+    let img = body.querySelector(`img[data-id="${w.id}"]`);
+    if (!img) {
+      img = new Image();
+      img.dataset.id = w.id;
+      img.alt = "";
+      img.src = `stills/${w.file || w.id}.webp`;
+      img.width = w.w;
+      img.height = w.h;
+      img.style.width = w.width;
+      fresh.push(img);
+    }
+    // Keep gallery order: append in sequence moves each image to its place.
+    if (body.children[i] !== img) body.insertBefore(img, body.children[i] || null);
+  });
+  $("#mini-empty").hidden = list.length > 0;
+  // Fly only for a click in step 1 of an open dialog; a restored or reset selection just shows.
+  if (!fresh.length || !state.open || state.step !== "widgets" || reducedMotion() || !renderMini.armed) return;
+  renderMini.armed = false;
+  for (const img of fresh) {
+    const from = document.querySelector(`.pick[data-id="${img.dataset.id}"] .pick-media img`);
+    if (from && from.complete && from.naturalWidth) flyTo(from, img);
+  }
+}
+
+// One canvas over the dialog runs every flight in a single animation loop.
+const FLY = { ms: 520, spread: 200, fade: 160 };
+const flights = [];
+let flyRaf = 0;
+function flyTo(fromImg, toImg) {
+  const canvas = $("#fly-fx");
+  const box = canvas.getBoundingClientRect();
+  const a = fromImg.getBoundingClientRect(), b = toImg.getBoundingClientRect();
+  if (!b.width || !a.width) return;
+  toImg.classList.add("is-landing");
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  if (canvas.width !== Math.round(box.width * dpr)) { canvas.width = Math.round(box.width * dpr); canvas.height = Math.round(box.height * dpr); }
+  // Blocks of about 5 pixels on the target, never more than 24 columns.
+  const cols = Math.max(6, Math.min(24, Math.round(b.width / 5)));
+  const k = fromImg.naturalWidth / cols;
+  const m = mosaic(fromImg, k);
+  const rows = m.height;
+  const px = m.getContext("2d").getImageData(0, 0, cols, rows).data;
+  const blocks = [];
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+    const i = (r * cols + c) * 4;
+    blocks.push({
+      c, r, color: `rgb(${px[i]},${px[i + 1]},${px[i + 2]})`,
+      delay: (c / cols) * 120 + Math.random() * FLY.spread,
+      lift: 20 + Math.random() * 40,
+    });
+  }
+  flights.push({ blocks, cols, rows, dpr, img: toImg, from: [a.left - box.left, a.top - box.top, a.width, a.height], to: [b.left - box.left, b.top - box.top, b.width, b.height], t0: performance.now(), landedAt: 0 });
+  if (!flyRaf) flyRaf = requestAnimationFrame(flyFrame);
+}
+
+function flyFrame(now) {
+  const canvas = $("#fly-fx");
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const ease = (p) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2);
+  for (let f = flights.length - 1; f >= 0; f--) {
+    const fl = flights[f];
+    if (!fl.img.isConnected) { flights.splice(f, 1); continue; }
+    const t = now - fl.t0;
+    const end = 120 + FLY.spread + FLY.ms;
+    if (t >= end && !fl.landedAt) { fl.landedAt = now; fl.img.classList.remove("is-landing"); }
+    const alpha = fl.landedAt ? 1 - (now - fl.landedAt) / FLY.fade : 1;
+    if (alpha <= 0) { flights.splice(f, 1); continue; }
+    const [ax, ay, aw, ah] = fl.from, [bx, by, bw, bh] = fl.to;
+    const D = fl.dpr;
+    ctx.globalAlpha = alpha;
+    for (const b of fl.blocks) {
+      const p = Math.max(0, Math.min(1, (t - b.delay) / FLY.ms));
+      const e = ease(p);
+      // Stepped flight: positions snap to a 3-pixel grid, with a small arc on the way.
+      const snap = (v) => Math.round(v / 3) * 3;
+      const sw = aw / fl.cols, sh = ah / fl.rows, tw = bw / fl.cols, th = bh / fl.rows;
+      const x = snap(ax + b.c * sw + (bx + b.c * tw - ax - b.c * sw) * e);
+      const y = snap(ay + b.r * sh + (by + b.r * th - ay - b.r * sh) * e - Math.sin(Math.PI * e) * b.lift);
+      const w = sw + (tw - sw) * e, h = sh + (th - sh) * e;
+      ctx.fillStyle = b.color;
+      ctx.fillRect(Math.round(x * D), Math.round(y * D), Math.ceil(w * D), Math.ceil(h * D));
+    }
+    ctx.globalAlpha = 1;
+  }
+  flyRaf = flights.length ? requestAnimationFrame(flyFrame) : 0;
+  if (!flyRaf) ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
 // The README of step 2, small: the picked GIFs side by side.
@@ -503,6 +604,7 @@ function update() {
     const note = pick.querySelector(".pick-note");
     note.textContent = !ok ? "Profile only" : on && w.id === "duel" ? "Friend’s login next" : "";
   }
+  renderMini(t);
   const picked = pickedWidgets().length;
   $("#picked-count").textContent = picked ? `${picked} selected` : "None selected yet";
   $("#pick-all").textContent = WIDGETS.filter(allowed).every((w) => state.picked.has(w.id)) ? "Clear" : "Select all";
@@ -1119,6 +1221,7 @@ function init() {
     if (pick && !pick.disabled) {
       const id = pick.dataset.id;
       state.picked.has(id) ? state.picked.delete(id) : state.picked.add(id);
+      renderMini.armed = true;
       return update();
     }
     const mode = e.target.closest(".mode button");
@@ -1136,6 +1239,7 @@ function init() {
       const all = WIDGETS.filter(allowed);
       const full = all.every((w) => state.picked.has(w.id));
       for (const w of all) full ? state.picked.delete(w.id) : state.picked.add(w.id);
+      renderMini.armed = true;
       return update();
     }
     if (e.target.closest("#next")) return state.step === visibleSteps().at(-1).key ? dialog.close() : move(1);
