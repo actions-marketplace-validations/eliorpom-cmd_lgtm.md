@@ -240,7 +240,8 @@ function highlightHtml(line) {
     out += esc(line.slice(last, m.index));
     const tok = m[0];
     const cls = tok.startsWith("<!--") ? "t-com" : tok[0] === "<" || tok.endsWith(">") ? "t-tag" : tok[0] === '"' ? "t-str" : "t-attr";
-    out += span(cls, tok);
+    // A quoted URL never wraps, so it can't break at a hyphen.
+    out += span(cls === "t-str" && tok.includes("://") ? "t-str t-url" : cls, tok);
     last = m.index + tok.length;
   }
   return out + esc(line.slice(last));
