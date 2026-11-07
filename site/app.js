@@ -66,6 +66,74 @@ const WIDGETS = [
 ];
 const BY_ID = new Map(WIDGETS.map((w) => [w.id, w]));
 
+// What each widget shows, pinned on the preview GIF. x and y are percentages of the image.
+// The texts follow the Widgets section of the README; positions match the sample GIFs.
+const BAND = { x: 30, y: 97, label: "The band", text: "The thin band underneath says what the widget shows and when it was last updated." };
+const HOTSPOTS = {
+  grass: [
+    { x: 78, y: 76, label: "Tufts", text: "One tuft per day over the last 90 days, oldest on the left, yesterday on the right. The busier the day, the taller the tuft; a day off leaves bare ground." },
+    { x: 55, y: 66, label: "Flowers", text: "Your languages, in proportion: more flowers of a colour means more code in that language." },
+    { x: 5, y: 42, label: "Fireflies", text: "The pull requests merged in the last 30 days, one each." },
+  ],
+  flame: [
+    { x: 66, y: 20, label: "The number", text: "Your current streak: days in a row with at least one contribution, up to yesterday." },
+    { x: 22, y: 42, label: "The fire", text: "It grows in four steps: small under 7 days, medium from 7, large from 30, and a blue heart from 100. With no streak, cold logs and a thread of smoke." },
+    { x: 72, y: 76, label: "The pips", text: "They show which of the four steps you reached." },
+  ],
+  counter: [
+    { x: 6, y: 34, label: "The drums", text: "Your contributions over the last 12 months. They roll from the day before's total up to today's, like a car's odometer." },
+    { x: 9, y: 66, label: "+N yesterday", text: "What yesterday added." },
+  ],
+  departures: [
+    { x: 3, y: 44, label: "The board", text: "Its flaps turn over every few seconds to show four stats in turn: contributions over 12 months, pull requests merged in 30 days, current streak, and top language." },
+  ],
+  hourglass: [
+    { x: 21, y: 74, label: "The grains", text: "Each grain is a batch of commits from the past year. The sand falls in order, oldest first, so the bottom of the pile is a year ago and the top is this month." },
+    { x: 35, y: 46, label: "The legend", text: "The colour of a grain is the language of the repository the commits went to, most used first." },
+    { x: 34, y: 82, label: "The scale", text: "How many commits one grain stands for." },
+  ],
+  forest: [
+    { x: 34, y: 56, label: "The trees", text: "One tree per week over the last 12 months, oldest on the left, months marked underneath. An empty week leaves a stump." },
+    { x: 91, y: 50, label: "Height and width", text: "They follow that week's contributions: a sapling for a quiet week, a tall wide tree for a busy one." },
+  ],
+  ecg: [
+    { x: 46, y: 52, label: "The beats", text: "One heartbeat per day over the last 7 days, oldest on the left: a single beat for a quiet day, two for a busy one, a flat line for a day without contributions." },
+    { x: 17, y: 36, label: "The best day", text: "The highest beat, highlighted in amber with its day name." },
+    { x: 73, y: 30, label: "On the right", text: "The week's total, the daily average and the best day's count." },
+  ],
+  records: [
+    { x: 5, y: 62, label: "Best day", text: "Your most contributions in a single day over the last 12 months, with its date." },
+    { x: 37, y: 62, label: "Longest streak", text: "The most days in a row with at least one contribution." },
+    { x: 69, y: 62, label: "Longest break", text: "The most days in a row without any." },
+  ],
+  "cherry-tree": [
+    { x: 40, y: 22, label: "The crown", text: "Cut into 90 slices, one per day, oldest on the left. A slice blossoms when you contributed that day and stays bare when you didn't." },
+    { x: 53, y: 88, label: "The petals", text: "Each falling petal is a pull request merged in the last 30 days; the count is in the corner." },
+  ],
+  donut: [
+    { x: 18, y: 28, label: "The icing", text: "Each slice is a language, sized by its share of the code in your repositories. Markup such as HTML and CSS is left out." },
+    { x: 50, y: 86, label: "The legend", text: "The five largest are named, the rest is \"Other\". Colours are GitHub's language colours, changed only when two look alike." },
+  ],
+  fireworks: [
+    { x: 68, y: 30, label: "The rockets", text: "One rocket per pull request merged in the last 7 days, launched in the order they were merged." },
+    { x: 76, y: 12, label: "The legend", text: "The colour of a burst is the main language of the pull request's repository; the legend counts them." },
+  ],
+  "fireworks-commits": [
+    { x: 34, y: 30, label: "The rockets", text: "One rocket per batch of commits of the last 7 days; the subtitle says how many commits a full burst stands for. A smaller burst is a batch that isn't full." },
+    { x: 66, y: 10, label: "The legend", text: "The colour is the language of the repository; the legend gives the commits per language." },
+  ],
+  median: [
+    { x: 24, y: 30, label: "Your tower", text: "Your contributions over 12 months, on the left." },
+    { x: 74, y: 44, label: "The median", text: "The middle account of the people you follow: half contributed more, half less." },
+    { x: 52, y: 46, label: "The dashed line", text: "It carries the median's height across to your tower so you can compare." },
+  ],
+  duel: [
+    { x: 14, y: 44, label: "The two sides", text: "You on the left in blue, your friend on the right in red, with your avatars." },
+    { x: 76, y: 72, label: "The pillars", text: "One per day (one per week for the 12-month duel), both sides on the same scale." },
+    { x: 24, y: 9, label: "The power bars", text: "They fill up to each total, and the winner is crowned." },
+  ],
+};
+
 const LOGIN_RE = /^[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}$/;
 const REPO_RE = /^([A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38})\/([A-Za-z0-9._-]{1,100})$/;
 const LOGIN_ERROR = "A GitHub login has letters, digits and single hyphens, up to 39 characters.";
@@ -77,6 +145,7 @@ const state = {
   picked: new Set(),
   step: "widgets",
   open: false,
+  theme: "dark",
 };
 
 const $ = (sel) => document.querySelector(sel);
@@ -581,6 +650,72 @@ function move(delta) {
 
 let opener = null;
 
+// README background of the previews: GitHub's dark or light theme. Remembered on this device only.
+function loadTheme() {
+  try { return localStorage.getItem("lgtm-theme") === "light" ? "light" : "dark"; } catch { return "dark"; }
+}
+function setTheme(theme) {
+  state.theme = theme === "light" ? "light" : "dark";
+  for (const el of $$(".gh-theme")) el.dataset.theme = state.theme;
+  for (const b of $$("[data-theme-set]")) b.setAttribute("aria-pressed", String(b.dataset.themeSet === state.theme));
+  try { localStorage.setItem("lgtm-theme", state.theme); } catch { /* storage blocked */ }
+}
+
+// Widget details: the GIF large, with numbered pins and a legend, in the same frame as the setup.
+let detailOpener = null;
+let detailId = "";
+function openDetail(id, from) {
+  const w = BY_ID.get(id);
+  const dialog = $("#detail");
+  if (!w) return;
+  detailId = id;
+  detailOpener = from || document.activeElement;
+  const spots = [...(HOTSPOTS[id] || []), BAND];
+  $("#detail-title").textContent = w.name;
+  $("#detail-id").textContent = `${id === "duel" ? "duel-<login>" : id} · ${CATEGORY[id]}`;
+  $("#detail-desc").textContent = w.desc;
+  const frame = $("#detail-frame");
+  // Widgets keep their README proportions, but never smaller than 60% of the preview.
+  frame.style.width = `${Math.max(60, parseFloat(w.width))}%`;
+  frame.style.aspectRatio = `${w.w} / ${w.h}`;
+  const img = $("#detail-img");
+  img.src = `stills/${w.file || w.id}.webp`;
+  img.alt = w.alt;
+  const gif = new Image();
+  gif.onload = () => { if (detailId === id) img.src = gif.src; };
+  gif.src = `widgets/${w.file || w.id}.gif`;
+  $("#detail-pins").innerHTML = spots.map((s, i) =>
+    `<li><button class="pin" type="button" data-spot="${i}" style="left:${s.x}%;top:${s.y}%;--i:${i}" aria-label="${i + 1}: ${esc(s.label)}" aria-describedby="spot-${i}">${i + 1}</button></li>`).join("");
+  $("#detail-legend").innerHTML = spots.map((s, i) =>
+    `<li data-spot="${i}" id="spot-${i}"><span class="legend-n" aria-hidden="true">${i + 1}</span><span><b>${esc(s.label)}.</b> ${esc(s.text)}</span></li>`).join("");
+  const note = $("#detail-note");
+  note.textContent = w.project ? "" : w.why;
+  note.hidden = w.project;
+  setTheme(state.theme);
+  if (!dialog.open) {
+    document.documentElement.classList.add("modal-open");
+    dialog.showModal();
+  }
+  dialog.querySelector(".cfg-body").scrollTop = 0;
+  $("#detail-title").focus({ preventScroll: true });
+}
+
+function markSpot(i) {
+  for (const el of $$("#detail [data-spot]")) el.classList.toggle("is-on", el.dataset.spot === i);
+}
+
+// "Add this widget": the setup opens on step 1 with the widget picked, in Profile mode if it needs it.
+function addFromDetail() {
+  const w = BY_ID.get(detailId);
+  const from = detailOpener;
+  $("#detail").close();
+  if (!w) return;
+  if (!w.project && state.mode === "project") setMode("profile");
+  state.picked.add(w.id);
+  state.step = "widgets";
+  openSetup(from);
+}
+
 function openSetup(from) {
   const dialog = $("#setup");
   if (dialog.open) return;
@@ -973,7 +1108,13 @@ function init() {
   document.addEventListener("click", (e) => {
     const openBtn = e.target.closest("[data-open]");
     if (openBtn) return openSetup(openBtn);
-    if (e.target.closest("[data-close]")) return dialog.close();
+    const closer = e.target.closest("[data-close]");
+    if (closer) return closer.closest("dialog").close();
+    const detailBtn = e.target.closest("[data-detail]");
+    if (detailBtn) return openDetail(detailBtn.dataset.detail, detailBtn);
+    const themeBtn = e.target.closest("[data-theme-set]");
+    if (themeBtn) return setTheme(themeBtn.dataset.themeSet);
+    if (e.target.closest("#detail-add")) return addFromDetail();
     const pick = e.target.closest(".pick");
     if (pick && !pick.disabled) {
       const id = pick.dataset.id;
@@ -1020,6 +1161,16 @@ function init() {
     });
   }
   window.addEventListener("hashchange", () => { if (location.hash === "#setup") openSetup(); });
+  const detail = $("#detail");
+  detail.addEventListener("click", (e) => { if (e.target === detail) detail.close(); });
+  detail.addEventListener("close", () => {
+    document.documentElement.classList.remove("modal-open");
+    if (detailOpener && document.contains(detailOpener) && !$("#setup").open) detailOpener.focus();
+  });
+  // Pins and legend lines light each other up.
+  detail.addEventListener("pointerover", (e) => { const t = e.target.closest("[data-spot]"); markSpot(t ? t.dataset.spot : ""); });
+  detail.addEventListener("focusin", (e) => { const t = e.target.closest("[data-spot]"); markSpot(t ? t.dataset.spot : ""); });
+  setTheme(loadTheme());
 
   update();
   renderUsed();

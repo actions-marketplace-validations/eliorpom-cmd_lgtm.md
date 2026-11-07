@@ -240,10 +240,14 @@
         </div>
         <details class="more" id="preview-more">
           <summary>Show preview</summary>
-          <div class="gh gh-preview">
+          <div class="gh gh-preview gh-theme" data-theme="dark">
             <div class="md-head">
               <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
               <span id="md-path">your-login / README.md</span>
+              <div class="seg theme-seg" role="group" aria-label="README background">
+                <button type="button" data-theme-set="dark" aria-pressed="true">Dark</button>
+                <button type="button" data-theme-set="light" aria-pressed="false">Light</button>
+              </div>
             </div>
             <div class="md-body" id="md-body"></div>
           </div>
@@ -290,6 +294,43 @@
         <button class="text-btn" type="button" id="skip-token">Skip, show public activity only</button>
         <button class="text-btn" type="button" id="close-text" data-close>Close</button>
       </div>
+    </footer>
+  </div>
+</dialog>
+
+<dialog class="cfg detail" id="detail" aria-labelledby="detail-title">
+  <div class="cfg-in">
+    <header class="cfg-head detail-head">
+      <div>
+        <h2 class="detail-title" id="detail-title" tabindex="-1"></h2>
+        <p class="detail-id" id="detail-id"></p>
+      </div>
+      <button class="close" type="button" data-close aria-label="Close">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </header>
+    <div class="cfg-body detail-body">
+      <p class="detail-desc" id="detail-desc"></p>
+      <div class="detail-stage gh-theme" data-theme="dark">
+        <div class="detail-bar">
+          <span>In your README</span>
+          <div class="seg theme-seg" role="group" aria-label="README background">
+                <button type="button" data-theme-set="dark" aria-pressed="true">Dark</button>
+                <button type="button" data-theme-set="light" aria-pressed="false">Light</button>
+              </div>
+        </div>
+        <div class="detail-canvas">
+          <div class="detail-frame" id="detail-frame">
+            <img id="detail-img" alt="">
+            <ol class="pins" id="detail-pins"></ol>
+          </div>
+        </div>
+      </div>
+      <ol class="detail-legend" id="detail-legend"></ol>
+    </div>
+    <footer class="cfg-foot">
+      <button class="pill-btn wide" type="button" id="detail-add">Add this widget</button>
+      <p class="cfg-reason" id="detail-note" hidden></p>
     </footer>
   </div>
 </dialog>

@@ -322,6 +322,36 @@ html.modal-open { overflow: hidden; }
 .mark.is-building rect { animation: px-in 240ms steps(3, end) both; animation-delay: var(--d); }
 @keyframes px-in { from { opacity: 0; transform: translateY(-4px); } }
 
+/* README previews follow GitHub's dark or light theme. */
+.gh-theme[data-theme="light"] { --gh-bg: #ffffff; --gh-line: #d0d7de; --gh-text: #1f2328; --gh-faint: #59636e; }
+.gh-theme[data-theme="light"] .md-body a { color: #0969da; }
+.gh-theme { transition: background-color 180ms ease, border-color 180ms ease; }
+.theme-seg { margin-left: auto; padding: 2px; gap: 2px; border-color: var(--gh-line); }
+.theme-seg button { height: 24px; padding: 0 var(--s-8); font-size: 12px; color: var(--gh-faint); }
+.theme-seg button:hover { color: var(--gh-text); }
+.theme-seg button[aria-pressed="true"] { background: var(--gh-text); color: var(--gh-bg); }
+
+/* Widget details: same frame as the setup. */
+.detail-head { grid-template-columns: 1fr auto; align-items: start; padding-bottom: var(--s-16); border-bottom: 1px solid var(--line); }
+.detail-title { font: 500 24px/1.2 var(--display); letter-spacing: -0.02em; color: var(--text); outline: none; }
+.detail-id { margin-top: var(--s-4); font: 400 12px/1.4 var(--mono); color: var(--faint); }
+.detail-body { padding-top: var(--s-24); }
+.detail-desc { font-size: 16px; line-height: 1.5; }
+.detail-stage { margin-top: var(--s-16); background: var(--gh-bg); border: 1px solid var(--gh-line); border-radius: var(--s-12); overflow: hidden; }
+.detail-bar { display: flex; align-items: center; gap: var(--s-8); height: 40px; padding: 0 var(--s-8) 0 var(--s-16); border-bottom: 1px solid var(--gh-line); font: 500 13px/1 var(--sans); color: var(--gh-text); }
+.detail-canvas { display: flex; justify-content: center; padding: var(--s-24) var(--s-16); }
+.detail-frame { position: relative; }
+.detail-frame img { width: 100%; height: 100%; image-rendering: auto; }
+.pins { list-style: none; margin: 0; padding: 0; }
+.pin { position: absolute; z-index: 1; width: 24px; height: 24px; margin: -12px 0 0 -12px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; background: var(--text); color: var(--bg); font: 600 12px/1 var(--sans); cursor: help; box-shadow: 0 0 0 3px rgba(8, 9, 11, 0.55), 0 2px 8px rgba(0, 0, 0, 0.5); animation: pin-in 240ms steps(3, end) both; animation-delay: calc(160ms + var(--i) * 70ms); transition: transform 160ms var(--ease); }
+.pin.is-on, .pin:hover { transform: scale(1.18); }
+@keyframes pin-in { from { opacity: 0; transform: scale(0.4); } }
+.detail-legend { list-style: none; margin: var(--s-24) 0 0; padding: 0; display: grid; gap: var(--s-4); }
+.detail-legend li { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: var(--s-12); padding: var(--s-8); border-radius: var(--s-8); font-size: 15px; line-height: 1.5; transition: background-color 160ms ease; }
+.detail-legend li.is-on { background: rgba(255, 255, 255, 0.05); }
+.legend-n { width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--line-2); font: 600 12px/1 var(--sans); color: var(--text); }
+.detail-legend li.is-on .legend-n { background: var(--text); color: var(--bg); border-color: var(--text); }
+
 /* Closing band after the gallery. */
 .closing { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--s-48); margin-top: var(--s-96); padding: var(--s-64); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px; background: var(--panel); overflow: hidden; isolation: isolate; }
 .closing::before { content: ""; position: absolute; inset: 0; z-index: -1; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Crect width='2' height='2' fill='%23fff' fill-opacity='.08'/%3E%3C/svg%3E"); -webkit-mask-image: radial-gradient(60% 90% at 85% 50%, #000 20%, transparent); mask-image: radial-gradient(60% 90% at 85% 50%, #000 20%, transparent); }
@@ -372,6 +402,9 @@ html.modal-open { overflow: hidden; }
   /* The dialog takes the whole screen; the footer stays at the bottom. */
   .cfg { width: 100%; height: 100dvh; max-height: 100dvh; margin: 0; border: 0; border-radius: 0; }
   .cfg-head { padding: var(--s-16) var(--s-16) 0 var(--s-16); }
+  .detail-head { padding-bottom: var(--s-12); }
+  .detail-canvas { padding: var(--s-16) var(--s-8); }
+  .pin { width: 20px; height: 20px; margin: -10px 0 0 -10px; font-size: 11px; }
   .cfg-body { padding: var(--s-24) var(--s-16); }
   .cfg-foot { padding: var(--s-12) var(--s-16) max(var(--s-16), env(safe-area-inset-bottom)); }
   .pane-title { font-size: 26px; }
