@@ -461,3 +461,7 @@ html.modal-open { overflow: hidden; }
   .page-head { padding-top: var(--s-48); }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
+
+/* Pixel burst on "Copied". */
+.burst { z-index: 40; width: 0; height: 0; pointer-events: none; }
+.burst span { position: absolute; left: 0; top: 0; width: 4px; height: 4px; }

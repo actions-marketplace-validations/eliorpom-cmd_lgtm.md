@@ -380,10 +380,43 @@ async function copy(text, button) {
   if (!button.dataset.label) button.dataset.label = button.innerHTML;
   button.innerHTML = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Copied';
   button.classList.add("is-done");
+  pixelBurst(button);
   clearTimeout(button.timer);
   button.timer = setTimeout(() => { button.innerHTML = button.dataset.label; button.classList.remove("is-done"); }, 1600);
   toast.live("Copied");
 }
+// A short burst of square pixels around a button that just copied. Inside the open dialog, so it
+// shows above the page's modal layer; skipped with reduced motion.
+function pixelBurst(el) {
+  if (reducedMotion() || !el.animate) return;
+  const host = el.closest("dialog") || document.body;
+  const r = el.getBoundingClientRect(), h = host.getBoundingClientRect();
+  const layer = document.createElement("div");
+  layer.className = "burst";
+  layer.setAttribute("aria-hidden", "true");
+  // Fixed in the page, absolute in a dialog (a transformed or top-layer box is the reference).
+  const inDialog = host !== document.body;
+  layer.style.left = `${r.left + r.width / 2 - (inDialog ? h.left : 0)}px`;
+  layer.style.top = `${r.top + r.height / 2 - (inDialog ? h.top : 0)}px`;
+  layer.style.position = inDialog ? "absolute" : "fixed";
+  const colors = ["#3fb950", "#3fb950", "#9aa3ad"];
+  for (let i = 0; i < 14; i++) {
+    const s = document.createElement("span");
+    const angle = (i / 14) * Math.PI * 2 + Math.random() * 0.4;
+    const dist = r.width / 2 + 10 + Math.random() * 18;
+    const dx = Math.round(Math.cos(angle) * dist / 2) * 2, dy = Math.round(Math.sin(angle) * (r.height / 2 + 10 + Math.random() * 14) / 2) * 2;
+    s.style.background = colors[i % colors.length];
+    layer.appendChild(s);
+    s.animate([
+      // Start on the button's edge, so the pixels leave it rather than cover the label.
+      { transform: `translate(calc(-50% + ${Math.round(dx * 0.55)}px), calc(-50% + ${Math.round(dy * 0.55)}px)) scale(1)`, opacity: 1 },
+      { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(0.5)`, opacity: 0 },
+    ], { duration: 420, easing: "steps(5, end)", fill: "forwards" });
+  }
+  host.appendChild(layer);
+  setTimeout(() => layer.remove(), 480);
+}
+
 // Screen readers hear it through a live region inside the dialog: the page behind a modal is inert.
 toast.live = (text) => { const el = $("#cfg-live") || $("#toast"); el.textContent = ""; setTimeout(() => { el.textContent = text; }, 50); };
 // Live star count, cached for an hour. On any failure, or at zero, the count stays hidden.
