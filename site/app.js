@@ -1,4 +1,4 @@
-// Launch page of LGTM.md: widget gallery and a setup that writes the workflow and README code.
+// Launch page of LGTM.md: widget gallery, and a setup in a dialog that writes the workflow and README code.
 "use strict";
 
 // The release the generated workflow pins. Change it here only.
@@ -75,8 +75,8 @@ const state = {
   target: "",
   rival: "",
   picked: new Set(),
-  tab: "preview",
-  setupVisible: false,
+  step: "widgets",
+  open: false,
 };
 
 const $ = (sel) => document.querySelector(sel);
@@ -276,182 +276,12 @@ function renderCode(el, text, lang) {
     return `<span class="ln${fresh ? " is-new" : ""}"><span class="lc" style="--i:${indent}ch">${hl(line) || " "}</span></span>`;
   }).join("");
 }
-
-function renderGrid() {
-  $("#filters").innerHTML = ["All", ...CATEGORIES].map((c) =>
-    `<button class="filter" type="button" data-filter="${c}" aria-pressed="${c === "All"}">${c}</button>`
-  ).join("");
-  $("#grid").innerHTML = WIDGETS.map((w) => {
-    const file = w.file || w.id;
-    const id = w.id === "duel" ? "duel-&lt;login&gt;" : w.id;
-    return `<li class="card" data-id="${w.id}" data-cat="${CATEGORY[w.id]}">
-      <div class="card-media">
-        <img src="widgets/${file}.gif" alt="${esc(w.alt)}" width="${w.w}" height="${w.h}" loading="lazy" decoding="async">
-      </div>
-      <div class="card-body">
-        <div class="card-text">
-          <h3 class="card-name">${esc(w.name)}</h3>
-          <p class="card-id">${id}</p>
-          <p class="card-desc">${esc(w.desc)}</p>
-          <p class="card-tag" id="tag-${w.id}" hidden></p>
-        </div>
-        <button class="toggle pill-btn small ghost" type="button" data-id="${w.id}" aria-pressed="false" aria-label="Add ${esc(w.name)}" aria-describedby="tag-${w.id}">Add</button>
-      </div>
-    </li>`;
-  }).join("");
-}
-
-function renderChips() {
-  $("#chips").innerHTML = WIDGETS.map((w) =>
-    `<button class="chip" type="button" data-id="${w.id}" aria-pressed="false">${w.id === "duel" ? "duel-&lt;login&gt;" : w.id}</button>`
-  ).join("");
-}
-
-function update() {
-  const t = targetInfo();
-  const project = state.mode === "project";
-  const pending = duelPending();
-
-  // Both mode switches, and the texts that depend on the mode.
-  for (const b of $$(".mode button")) b.setAttribute("aria-pressed", String(b.dataset.mode === state.mode));
-  $("#repo-title").textContent = project ? "Your repository" : "Your profile repository";
-  $("#repo-help").textContent = project
-    ? "The widgets show this repository's activity: commits on its default branch, merged pull requests and languages."
-    : "A profile README lives in a repository named like your login. It shows at the top of your GitHub profile.";
-  $("#target-label").textContent = project ? "Repository (owner/name)" : "Your GitHub login";
-  $("#target").placeholder = project ? "owner/repo" : "your-login";
-  $("#target").setAttribute("aria-invalid", String(!!t.error));
-  const err = $("#target-error");
-  err.hidden = !t.error;
-  err.textContent = t.error || "";
-  $("#repo-check").hidden = project;
-  const createRepo = $("#repo-create");
-  createRepo.hidden = project;
-  createRepo.href = t.ok && !project
-    ? `https://github.com/new?name=${encodeURIComponent(t.owner)}&visibility=public`
-    : "https://github.com/new?visibility=public";
-
-  // Gallery cards and chips share one selection.
-  for (const w of WIDGETS) {
-    const ok = allowed(w);
-    const on = state.picked.has(w.id) && ok;
-    const needs = on && w.id === "duel" && pending;
-    const card = document.querySelector(`.card[data-id="${w.id}"]`);
-    card.classList.toggle("is-picked", on);
-    card.classList.toggle("needs-login", needs);
-    const tag = card.querySelector(".card-tag");
-    tag.textContent = !ok ? w.why : needs ? "Type a friend’s login in the setup below." : "";
-    tag.hidden = !tag.textContent;
-    const toggle = card.querySelector(".toggle");
-    toggle.disabled = !ok;
-    toggle.setAttribute("aria-pressed", String(on));
-    toggle.textContent = on ? "Added ✓" : "Add";
-    const chip = document.querySelector(`.chip[data-id="${w.id}"]`);
-    chip.disabled = !ok;
-    chip.setAttribute("aria-pressed", String(on));
-    chip.classList.toggle("needs-login", needs);
-    if (w.id === "duel") chip.textContent = `duel-${rivalLogin() || "<login>"}`;
-  }
-
-  const active = activeWidgets();
-  const count = active.length;
-  const countText = `${count} widget${count === 1 ? "" : "s"} selected`;
-  $("#bar-count").textContent = countText;
-  $("#picked-count").textContent = count ? countText : "None picked yet";
-  const showBar = count > 0 && !state.setupVisible;
-  $("#bar").classList.toggle("show", showBar);
-  $("#bar").setAttribute("aria-hidden", String(!showBar));
-  $("#bar a").tabIndex = showBar ? 0 : -1;
-  $("#bar-thumbs").innerHTML = active.slice(0, 6).map((w) => `<img src="widgets/${w.file || w.id}.gif" alt="">`).join("");
-  $("#rival-field").hidden = !(state.picked.has("duel") && !project);
-  const rErr = rivalError();
-  $("#rival-error").hidden = !rErr;
-  $("#rival-error").textContent = rErr;
-  $("#rival").setAttribute("aria-invalid", String(!!rErr));
-  $("#pick-all").textContent = WIDGETS.filter(allowed).every((w) => state.picked.has(w.id)) ? "Clear" : "Select all";
-
-  // Snippets, preview, and the link that opens GitHub's new-file page with the workflow filled in.
-  const yaml = buildYaml();
-  const html = buildHtml(t);
-  renderCode($("#yaml"), yaml, "yaml");
-  renderCode($("#html"), html || "<!-- Pick a widget: its image line appears here. -->", "html");
-  renderPreview(t);
-  for (const b of $$(".copy")) b.disabled = !count;
-  $("#copy-label").textContent = state.tab === "yaml" ? "Copy workflow" : "Copy README";
-
-  const repo = `${t.owner}/${t.repo}`;
-  $("#commit-help").textContent = project
-    ? `The GIFs go on a separate lgtm-md branch of ${repo}, so your default branch gets no nightly commit. No token needed.`
-    : `The GIFs go in the widgets/ folder of ${repo} and are redrawn every night.`;
-
-  const create = $("#create");
-  const ready = t.ok && count > 0;
-  create.setAttribute("aria-disabled", String(!ready));
-  // A disabled link has no href, so neither a click nor the keyboard can follow it.
-  if (ready) {
-    // HEAD resolves to the default branch, whatever its name.
-    create.href = `https://github.com/${t.owner}/${t.repo}/new/HEAD?filename=${encodeURIComponent(".github/workflows/lgtm-md.yml")}&value=${encodeURIComponent(yaml)}`;
-    create.target = "_blank";
-  } else {
-    create.removeAttribute("href");
-    create.removeAttribute("target");
-  }
-  const hint = $("#create-hint");
-  if (!count) hint.textContent = pending ? "Type a friend’s login for the duel." : "Pick a widget first.";
-  else if (t.error) hint.textContent = "Fix your login above.";
-  else if (!t.ok) hint.textContent = project ? "Type the repository first." : "Type your login first.";
-  else hint.textContent = "";
-  hint.hidden = !hint.textContent;
-
-  $("#actions-link").href = `https://github.com/${t.owner}/${t.repo}/actions`;
-  const result = $("#result-link");
-  result.href = project ? `https://github.com/${t.owner}/${t.repo}` : `https://github.com/${t.owner}`;
-  result.textContent = project ? "See your repository ↗" : "See your profile ↗";
-
-  // Private activity needs a token only for a profile: a project's own token already reads it.
-  $("#step-token").hidden = project;
-
-  saveUrl();
-}
-
-// The selection lives in the address bar, so a link restores it.
-function saveUrl() {
-  const p = new URLSearchParams();
-  const ids = WIDGETS.filter((w) => state.picked.has(w.id)).map((w) => w.id);
-  if (ids.length) p.set("w", ids.join(","));
-  if (state.target.trim()) p.set("u", state.target.trim());
-  if (state.mode !== "profile") p.set("m", state.mode);
-  if (state.rival.trim()) p.set("r", state.rival.trim());
-  const q = p.toString().replace(/%2C/g, ",");
-  const url = location.pathname + (q ? `?${q}` : "") + location.hash;
-  try { history.replaceState(null, "", url); } catch { /* file:// and sandboxed frames */ }
-}
-
-// Everything read from the address bar is checked before use.
-function loadUrl() {
-  const p = new URLSearchParams(location.search);
-  const m = p.get("m");
-  if (m === "profile" || m === "project") state.mode = m;
-  for (const id of (p.get("w") || "").split(",").slice(0, WIDGETS.length)) if (BY_ID.has(id)) state.picked.add(id);
-  const u = (p.get("u") || "").trim().slice(0, 140);
-  if (u && (state.mode === "profile" ? LOGIN_RE.test(u) : REPO_RE.test(u) || /^[A-Za-z0-9-]{1,39}\/$/.test(u))) state.target = u;
-  const r = (p.get("r") || "").trim().slice(0, 40);
-  if (LOGIN_RE.test(r)) state.rival = r;
-  $("#target").value = state.target;
-  $("#rival").value = state.rival;
-}
-
-function selectTab(file) {
-  state.tab = file;
-  for (const t of $$(".gh-tab")) t.setAttribute("aria-selected", String(t.dataset.file === file));
-  $("#preview").hidden = file !== "preview";
-  $("#html").hidden = file !== "html";
-  $("#yaml").hidden = file !== "yaml";
-  $("#copy-label").textContent = file === "yaml" ? "Copy workflow" : "Copy README";
-}
-
 function toast(text) {
   const el = $("#toast");
+  // A modal dialog sits in the top layer: the toast moves inside it to stay visible.
+  const dialog = $("#setup");
+  const host = dialog && dialog.open ? dialog : document.body;
+  if (el.parentElement !== host) host.appendChild(el);
   el.textContent = text;
   el.classList.add("show");
   clearTimeout(toast.timer);
@@ -476,72 +306,6 @@ async function copy(text) {
   }
   toast("Copied");
 }
-
-// Switching mode keeps the login: Project prefills "login/", Profile keeps the owner part.
-function setMode(mode) {
-  if (mode !== state.mode) {
-    const raw = state.target.trim();
-    if (mode === "project") state.target = raw && !raw.includes("/") ? `${raw}/` : raw;
-    else state.target = raw.split("/")[0];
-    state.mode = mode;
-    $("#target").value = state.target;
-  }
-  update();
-}
-
-function toggleWidget(id, button) {
-  if (state.picked.has(id)) state.picked.delete(id);
-  else state.picked.add(id);
-  update();
-  if (button && button.classList.contains("toggle")) {
-    button.classList.remove("pop");
-    void button.offsetWidth;
-    button.classList.add("pop");
-  }
-}
-
-// Real profiles that use the widgets, from wild.json. One entry gets one wide card.
-async function renderWild() {
-  try {
-    const res = await fetch("wild.json", { cache: "no-cache" });
-    if (!res.ok) return;
-    const list = (await res.json()).filter((e) =>
-      e && LOGIN_RE.test(e.login || "") && /^wild\/[\w.-]+\.(webp|png)$/.test(e.image || "") && Array.isArray(e.widgets));
-    if (!list.length) return;
-    const names = (ids) => {
-      const n = ids.filter((id) => BY_ID.has(id)).map((id) => BY_ID.get(id).name.toLowerCase());
-      return n.length > 1 ? `${n.slice(0, -1).join(", ")} and ${n[n.length - 1]}` : n.join("");
-    };
-    const date = (d) => {
-      const t = /^\d{4}-\d{2}-\d{2}$/.test(d || "") ? new Date(`${d}T12:00:00Z`) : null;
-      return t ? t.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }) : "";
-    };
-    $("#wild-list").classList.toggle("single", list.length === 1);
-    $("#wild-list").innerHTML = list.map((e) => `
-      <a class="wild-card" href="https://github.com/${e.login}" target="_blank" rel="noopener">
-        <div class="wild-shot"><img src="${e.image}" alt="README of ${e.login} on GitHub with the ${esc(names(e.widgets))} widgets" width="${+e.width || 1600}" height="${+e.height || 1000}" loading="lazy" decoding="async"></div>
-        <div class="wild-meta">
-          <div class="wild-who"><img src="https://github.com/${e.login}.png?size=64" alt="" width="40" height="40" loading="lazy"><span class="wild-login">${e.login}</span></div>
-          <p class="wild-uses">Uses ${esc(names(e.widgets))}.</p>
-          ${date(e.captured) ? `<p class="wild-date">Screenshot from ${date(e.captured)}</p>` : ""}
-          <span class="pill-btn small ghost">View profile ↗</span>
-        </div>
-      </a>`).join("");
-    $("#wild").hidden = false;
-    numberSections();
-  } catch { /* the section stays hidden */ }
-}
-
-// Section labels count only the sections on screen.
-function numberSections() {
-  let n = 0;
-  for (const sec of $$("main .sec")) {
-    if (sec.hidden) continue;
-    n += 1;
-    sec.querySelector(".sec-num").textContent = `${String(n).padStart(2, "0")} / `;
-  }
-}
-
 // Live star count, cached for an hour. On any failure, or at zero, the count stays hidden.
 async function loadStars() {
   const el = $("#star-count");
@@ -559,21 +323,303 @@ async function loadStars() {
   } catch { /* offline or rate-limited */ }
 }
 
+// The setup, one question per screen. The token step exists only for a profile:
+// a project's own token already reads its private activity.
+const STEPS = [
+  { key: "widgets", next: "Continue" },
+  { key: "target", next: "Continue" },
+  { key: "token", next: "I added the secret", time: "about 1 min", profileOnly: true },
+  { key: "workflow", next: "I committed it", time: "about 1 min" },
+  { key: "readme", next: "Done" },
+  { key: "check" },
+];
+
+function visibleSteps() {
+  return STEPS.filter((s) => !(s.profileOnly && state.mode === "project"));
+}
+
+function stepIndex(key) {
+  return visibleSteps().findIndex((s) => s.key === key);
+}
+
+// Why the step can't be left yet, or "" when it can. Steps 3 to 5 happen on GitHub: nothing to check.
+function stepBlock(key) {
+  if (key === "widgets") return pickedWidgets().length ? "" : "Pick at least one widget to continue.";
+  if (key !== "target") return "";
+  const t = targetInfo();
+  const project = state.mode === "project";
+  if (t.error) return project ? "Fix the repository name to continue." : "Fix your login to continue.";
+  if (!t.ok) return project ? "Type the repository to continue." : "Type your login to continue.";
+  if (duelPending()) return rivalError() ? "Fix your friend’s login to continue." : "Type a friend’s login for the duel, or go back and remove it.";
+  return "";
+}
+
+// The furthest step that can be shown: the first one that is not valid yet, or the last.
+function lastReachable() {
+  const steps = visibleSteps();
+  const i = steps.findIndex((s) => stepBlock(s.key));
+  return i === -1 ? steps.length - 1 : i;
+}
+
+function renderGallery() {
+  $("#filters").innerHTML = ["All", ...CATEGORIES].map((c) =>
+    `<button class="filter" type="button" data-filter="${c}" aria-pressed="${c === "All"}">${c}</button>`
+  ).join("");
+  $("#grid").innerHTML = WIDGETS.map((w) => {
+    const id = w.id === "duel" ? "duel-&lt;login&gt;" : w.id;
+    return `<li class="card" data-cat="${CATEGORY[w.id]}">
+      <div class="card-media">
+        <img src="widgets/${w.file || w.id}.gif" alt="${esc(w.alt)}" width="${w.w}" height="${w.h}" loading="lazy" decoding="async">
+      </div>
+      <div class="card-body">
+        <h3 class="card-name">${esc(w.name)}</h3>
+        <p class="card-id">${id}${w.project ? "" : ` <span class="card-tag">· Profile only</span>`}</p>
+        <p class="card-desc">${esc(w.desc)}</p>
+      </div>
+    </li>`;
+  }).join("");
+}
+
+function renderPicks() {
+  $("#picks").innerHTML = WIDGETS.map((w) => `
+    <li><button class="pick" type="button" data-id="${w.id}" aria-pressed="false">
+      <span class="pick-media"><img src="widgets/${w.file || w.id}.gif" alt="" width="${w.w}" height="${w.h}" loading="lazy" decoding="async"></span>
+      <span class="pick-name">${esc(w.name)}</span>
+      <span class="pick-note" id="note-${w.id}"></span>
+      <span class="pick-check" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
+    </button></li>`).join("");
+}
+
+// The README of step 2, small: the picked GIFs side by side.
+function renderStrip(t) {
+  $("#strip-path").textContent = state.mode === "project" ? `${t.owner} / ${t.repo} / README.md` : `${t.owner} / README.md`;
+  const list = pickedWidgets();
+  $("#strip-row").innerHTML = list.map((w) => `<img src="widgets/${w.file || w.id}.gif" alt="${esc(w.alt)}" width="${w.w}" height="${w.h}">`).join("");
+}
+
+function update() {
+  const t = targetInfo();
+  const project = state.mode === "project";
+  const pending = duelPending();
+  const steps = visibleSteps();
+  if (stepIndex(state.step) === -1) state.step = "widgets";
+  const idx = stepIndex(state.step);
+  const step = steps[idx];
+
+  // Step 1: mode, picks, count.
+  for (const b of $$(".mode button")) b.setAttribute("aria-pressed", String(b.dataset.mode === state.mode));
+  $("#mode-help").textContent = project
+    ? "For a repository README. The widgets show the activity of that repository."
+    : "For your profile README, the one at the top of your GitHub profile.";
+  for (const w of WIDGETS) {
+    const ok = allowed(w);
+    const on = state.picked.has(w.id) && ok;
+    const pick = document.querySelector(`.pick[data-id="${w.id}"]`);
+    pick.disabled = !ok;
+    pick.setAttribute("aria-pressed", String(on));
+    const note = pick.querySelector(".pick-note");
+    note.textContent = !ok ? "Profile only" : on && w.id === "duel" ? "Friend’s login next" : "";
+  }
+  const picked = pickedWidgets().length;
+  $("#picked-count").textContent = picked ? `${picked} selected` : "None selected yet";
+  $("#pick-all").textContent = WIDGETS.filter(allowed).every((w) => state.picked.has(w.id)) ? "Clear" : "Select all";
+
+  // Step 2: login or repository, friend for the duel.
+  $("#pane-target").textContent = project ? "Which repository?" : "What’s your GitHub login?";
+  $("#repo-help").textContent = project
+    ? "The widgets show its commits on the default branch, its merged pull requests and its languages."
+    : "Your profile README lives in a repository named like your login.";
+  $("#target-label").textContent = project ? "Repository (owner/name)" : "Your GitHub login";
+  $("#target").placeholder = project ? "owner/repo" : "your-login";
+  $("#target").setAttribute("aria-invalid", String(!!t.error));
+  const err = $("#target-error");
+  err.hidden = !t.error;
+  err.textContent = t.error || "";
+  $("#repo-note").hidden = project;
+  $("#repo-create").href = t.ok && !project
+    ? `https://github.com/new?name=${encodeURIComponent(t.owner)}&visibility=public`
+    : "https://github.com/new?visibility=public";
+  $("#rival-field").hidden = !(state.picked.has("duel") && !project);
+  const rErr = rivalError();
+  $("#rival-error").hidden = !rErr;
+  $("#rival-error").textContent = rErr;
+  $("#rival").setAttribute("aria-invalid", String(!!rErr));
+  renderStrip(t);
+
+  // Steps 3 to 6: links into the visitor's repository.
+  const repoUrl = `https://github.com/${t.owner}/${t.repo}`;
+  $("#secret-link").href = `${repoUrl}/settings/secrets/actions/new`;
+  const yaml = buildYaml();
+  const html = buildHtml(t);
+  renderCode($("#yaml"), yaml, "yaml");
+  renderCode($("#html"), html || "<!-- Pick a widget: its image line appears here. -->", "html");
+  renderPreview(t);
+  const count = activeWidgets().length;
+  for (const b of $$(".copy")) b.disabled = !count;
+  $("#commit-help").textContent = project
+    ? `It draws the GIFs every night on a separate lgtm-md branch of ${t.owner}/${t.repo}, so your default branch gets no nightly commit.`
+    : `It draws the GIFs every night in the widgets folder of ${t.owner}/${t.repo}.`;
+  const create = $("#create");
+  const ready = t.ok && count > 0;
+  create.setAttribute("aria-disabled", String(!ready));
+  // A disabled link has no href, so neither a click nor the keyboard can follow it.
+  if (ready) {
+    // HEAD resolves to the default branch, whatever its name.
+    create.href = `${repoUrl}/new/HEAD?filename=${encodeURIComponent(".github/workflows/lgtm-md.yml")}&value=${encodeURIComponent(yaml)}`;
+    create.target = "_blank";
+  } else {
+    create.removeAttribute("href");
+    create.removeAttribute("target");
+  }
+  const hint = $("#create-hint");
+  if (!count) hint.textContent = pending ? "Type a friend’s login for the duel." : "Pick a widget first.";
+  else if (t.error) hint.textContent = "Fix your login first.";
+  else if (!t.ok) hint.textContent = project ? "Type the repository first." : "Type your login first.";
+  else hint.textContent = "";
+  hint.hidden = !hint.textContent;
+  $("#readme-link").href = `${repoUrl}/edit/HEAD/README.md`;
+  $("#actions-link").href = `${repoUrl}/actions`;
+  const result = $("#result-link");
+  result.href = project ? repoUrl : `https://github.com/${t.owner}`;
+  result.textContent = project ? "Open your repository ↗" : "Open your profile ↗";
+  $("#tip-secret").hidden = project;
+
+  // Shell: header, progress bar, the current pane, the footer.
+  const dialog = $("#setup");
+  dialog.classList.toggle("is-wide", state.step === "widgets");
+  $("#cfg-count").innerHTML = `Step ${idx + 1} of ${steps.length}${step.time ? ` <span class="cfg-time">· ${step.time}</span>` : ""}`;
+  $("#cfg-bar").innerHTML = steps.map((s, i) => `<li class="${i <= idx ? "on" : ""}"></li>`).join("");
+  for (const pane of $$(".pane")) pane.hidden = pane.dataset.pane !== state.step;
+  const block = stepBlock(state.step);
+  const next = $("#next");
+  next.hidden = !step.next;
+  next.textContent = step.next || "";
+  next.disabled = !!block;
+  $("#cfg-reason").textContent = block;
+  $("#cfg-reason").hidden = !block;
+  $("#back").hidden = idx === 0;
+  $("#skip-token").hidden = state.step !== "token";
+  $("#close-text").hidden = state.step !== "check";
+
+  saveUrl();
+}
+
+// The selection lives in the address bar, so a link restores it, and #setup opens the setup.
+function saveUrl() {
+  const p = new URLSearchParams();
+  const ids = WIDGETS.filter((w) => state.picked.has(w.id)).map((w) => w.id);
+  if (ids.length) p.set("w", ids.join(","));
+  if (state.target.trim()) p.set("u", state.target.trim());
+  if (state.mode !== "profile") p.set("m", state.mode);
+  if (state.rival.trim()) p.set("r", state.rival.trim());
+  if (state.step !== "widgets") p.set("s", String(STEPS.findIndex((s) => s.key === state.step) + 1));
+  const q = p.toString().replace(/%2C/g, ",");
+  const url = location.pathname + (q ? `?${q}` : "") + (state.open ? "#setup" : "");
+  try { history.replaceState(null, "", url); } catch { /* file:// and sandboxed frames */ }
+}
+
+// Everything read from the address bar is checked before use.
+function loadUrl() {
+  const p = new URLSearchParams(location.search);
+  const m = p.get("m");
+  if (m === "profile" || m === "project") state.mode = m;
+  for (const id of (p.get("w") || "").split(",").slice(0, WIDGETS.length)) if (BY_ID.has(id)) state.picked.add(id);
+  const u = (p.get("u") || "").trim().slice(0, 140);
+  if (u && (state.mode === "profile" ? LOGIN_RE.test(u) : REPO_RE.test(u) || /^[A-Za-z0-9-]{1,39}\/$/.test(u))) state.target = u;
+  const r = (p.get("r") || "").trim().slice(0, 40);
+  if (LOGIN_RE.test(r)) state.rival = r;
+  $("#target").value = state.target;
+  $("#rival").value = state.rival;
+  // A shared step never skips a step that is not filled in yet.
+  const s = STEPS[parseInt(p.get("s"), 10) - 1];
+  const steps = visibleSteps();
+  if (s && stepIndex(s.key) !== -1) state.step = steps[Math.min(stepIndex(s.key), lastReachable())].key;
+  return p.has("w") || location.hash === "#setup";
+}
+
+function goTo(key, focus = true) {
+  if (stepIndex(key) === -1 || stepIndex(key) > lastReachable()) return;
+  state.step = key;
+  update();
+  $("#cfg-body").scrollTop = 0;
+  if (focus) document.getElementById(`pane-${key}`).focus({ preventScroll: true });
+}
+
+function move(delta) {
+  const steps = visibleSteps();
+  const i = stepIndex(state.step) + delta;
+  if (i >= 0 && i < steps.length) goTo(steps[i].key);
+}
+
+let opener = null;
+
+function openSetup(from) {
+  const dialog = $("#setup");
+  if (dialog.open) return;
+  opener = from || document.activeElement;
+  state.open = true;
+  document.documentElement.classList.add("modal-open");
+  dialog.showModal();
+  update();
+  $("#cfg-body").scrollTop = 0;
+  document.getElementById(`pane-${state.step}`).focus({ preventScroll: true });
+}
+
+function onClose() {
+  state.open = false;
+  document.documentElement.classList.remove("modal-open");
+  saveUrl();
+  if (opener && document.contains(opener)) opener.focus();
+}
+
+// Switching mode keeps the login: Project prefills "login/", Profile keeps the owner part.
+function setMode(mode) {
+  if (mode !== state.mode) {
+    const raw = state.target.trim();
+    if (mode === "project") state.target = raw && !raw.includes("/") ? `${raw}/` : raw;
+    else state.target = raw.split("/")[0];
+    state.mode = mode;
+    $("#target").value = state.target;
+  }
+  update();
+}
+
+// Profiles that run LGTM.md, from wild.json: one round avatar each.
+async function renderUsed() {
+  try {
+    const res = await fetch("wild.json", { cache: "no-cache" });
+    if (!res.ok) return;
+    const list = (await res.json()).filter((e) => e && LOGIN_RE.test(e.login || "")).slice(0, 24);
+    if (!list.length) return;
+    $("#used-list").innerHTML = list.map((e) => `<li><a href="https://github.com/${e.login}" target="_blank" rel="noopener" title="${e.login}" aria-label="${e.login} on GitHub"><img src="https://github.com/${e.login}.png?size=64" alt="" width="32" height="32" loading="lazy"></a></li>`).join("");
+    $("#used").hidden = false;
+  } catch { /* the row stays hidden */ }
+}
+
 function init() {
   document.documentElement.classList.add("js");
   for (const el of $$("[data-version]")) el.textContent = VERSION;
-  renderGrid();
-  renderChips();
-  loadUrl();
-  numberSections();
+  loadStars();
+  // compare.html shares this script for the star count only.
+  if (!$("#setup")) return;
+
+  renderGallery();
+  renderPicks();
+  const open = loadUrl();
+  const dialog = $("#setup");
 
   document.addEventListener("click", (e) => {
-    const toggle = e.target.closest(".toggle, .chip");
-    if (toggle && !toggle.disabled) return toggleWidget(toggle.dataset.id, toggle);
+    const openBtn = e.target.closest("[data-open]");
+    if (openBtn) return openSetup(openBtn);
+    if (e.target.closest("[data-close]")) return dialog.close();
+    const pick = e.target.closest(".pick");
+    if (pick && !pick.disabled) {
+      const id = pick.dataset.id;
+      state.picked.has(id) ? state.picked.delete(id) : state.picked.add(id);
+      return update();
+    }
     const mode = e.target.closest(".mode button");
     if (mode) return setMode(mode.dataset.mode);
-    const tab = e.target.closest(".gh-tab");
-    if (tab) return selectTab(tab.dataset.file);
     const filter = e.target.closest(".filter");
     if (filter) {
       for (const f of $$(".filter")) f.setAttribute("aria-pressed", String(f === filter));
@@ -582,24 +628,27 @@ function init() {
       return;
     }
     const copyBtn = e.target.closest(".copy");
-    if (copyBtn && !copyBtn.disabled) {
-      const file = copyBtn.dataset.copy === "active" && state.tab === "yaml" ? "yaml" : "html";
-      return copy(activeWidgets().length ? $("#" + file).dataset.raw : "");
-    }
+    if (copyBtn && !copyBtn.disabled) return copy(activeWidgets().length ? $("#" + copyBtn.dataset.copy).dataset.raw : "");
     if (e.target.closest("#pick-all")) {
       const all = WIDGETS.filter(allowed);
       const full = all.every((w) => state.picked.has(w.id));
       for (const w of all) full ? state.picked.delete(w.id) : state.picked.add(w.id);
       return update();
     }
+    if (e.target.closest("#next")) return state.step === visibleSteps().at(-1).key ? dialog.close() : move(1);
+    if (e.target.closest("#back")) return move(-1);
+    if (e.target.closest("#skip-token")) return move(1);
   });
+  // A click on the dimmed backdrop lands on the dialog itself, outside its content.
+  dialog.addEventListener("click", (e) => { if (e.target === dialog) dialog.close(); });
+  dialog.addEventListener("close", onClose);
   $("#target").addEventListener("input", (e) => { state.target = e.target.value; update(); });
   $("#rival").addEventListener("input", (e) => { state.rival = e.target.value; update(); });
-
-  // Pointing at the button shows the file it creates.
-  for (const ev of ["mouseenter", "focus"]) $("#create").addEventListener(ev, () => selectTab("yaml"));
-
-  // Mode switches also move with the arrow keys.
+  // Enter in a field moves on when the step is valid.
+  for (const input of [$("#target"), $("#rival")]) {
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter" && !stepBlock(state.step)) { e.preventDefault(); move(1); } });
+  }
+  // The mode switch also moves with the arrow keys.
   for (const group of $$(".mode")) {
     group.addEventListener("keydown", (e) => {
       if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
@@ -608,21 +657,11 @@ function init() {
       group.querySelector(`[data-mode="${state.mode}"]`).focus();
     });
   }
-
-  if ("IntersectionObserver" in window) {
-    // The selection bar hides once the setup is on screen, and stays hidden below it.
-    new IntersectionObserver(([en]) => { state.setupVisible = en.isIntersecting || en.boundingClientRect.top < 0; update(); }, { rootMargin: "0px 0px -40% 0px" }).observe($("#setup"));
-    // The step in the middle of the screen is the active one.
-    const steps = $$(".step");
-    const io = new IntersectionObserver((entries) => {
-      for (const en of entries) if (en.isIntersecting) for (const st of steps) st.classList.toggle("is-active", st === en.target);
-    }, { rootMargin: "-45% 0px -45% 0px" });
-    for (const st of steps) io.observe(st);
-  }
+  window.addEventListener("hashchange", () => { if (location.hash === "#setup") openSetup(); });
 
   update();
-  renderWild();
-  loadStars();
+  renderUsed();
+  if (open) openSetup($("main [data-open]"));
 }
 
 init();
