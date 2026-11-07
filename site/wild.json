@@ -1,10 +1,8 @@
 [
   {
     "login": "eliorpom-cmd",
-    "image": "wild/eliorpom-cmd.webp",
-    "width": 1692,
-    "height": 1160,
-    "widgets": ["grass", "flame", "departures"],
-    "captured": "2026-11-07"
+    "avatar": "https://avatars.githubusercontent.com/u/165307851?v=4",
+    "first_seen": "2026-11-07",
+    "last_seen": "2026-11-07"
   }
 ]
