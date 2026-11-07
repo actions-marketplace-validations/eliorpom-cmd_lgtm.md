@@ -8,7 +8,14 @@ A GitHub Action collects your contributions, languages and merged pull requests,
 
 Every widget answers one question in two seconds. The animation is there to show the number, not to decorate it.
 
-## Quick start
+## Get started
+
+Go to **[lgtm.byelior.dev](https://lgtm.byelior.dev)**, pick your widgets and type your login. The site writes the workflow and the README lines for you, and walks you through the token step.
+
+<details>
+<summary><b>Install by hand</b></summary>
+
+### Profile README
 
 You need a [profile repository](https://docs.github.com/en/account-and-profile/setting-up-and-managing-your-github-profile/customizing-your-profile/managing-your-profile-readme): a public repository named after your login (`<login>/<login>`).
 
@@ -69,7 +76,7 @@ The image links back here so visitors can find the project. A small credit line 
 
 From then on, the widgets redraw themselves every night. To redraw them now, open the **Actions** tab, pick **LGTM.md**, then **Run workflow**.
 
-## Count your private activity (optional)
+### Count your private activity (optional)
 
 With the default token, the widgets only see public activity. To count your work in private repositories too, give the Action a read-only token:
 
@@ -83,6 +90,29 @@ The workflow above already uses `LGTM_MD_TOKEN` when it exists. The token can on
 One limit comes from GitHub: a fine-grained token covers the repositories of a single owner, so pull requests in **another organization's private repositories** are not counted. Everything else is: private commits, private repositories' languages and their history.
 
 The link sets no expiration, so the widgets keep updating without you renewing anything. If you prefer an expiry date, pick one on the form: GitHub emails you before the token expires, then create a new one and replace the secret.
+
+### Project README
+
+The same widgets can draw a repository instead of an account: its commits, merged pull requests, languages and stars. Set the `repo` input, and publish the GIFs on a separate branch: a nightly commit on the default branch would count as activity, and the streak would never end.
+
+**1. Add the workflow.** In your project repository, create `.github/workflows/lgtm-md.yml` from [`examples/repo-workflow.yml`](examples/repo-workflow.yml). It draws the widgets every night and replaces a single commit on a `lgtm-md` branch, so that branch never grows. The default token is enough, private repository included: no secret to set. GitHub pauses scheduled workflows in a public repository after 60 days without activity; if your widgets stop updating, turn the workflow back on in the **Actions** tab.
+
+**2. Show them in your README**, from that branch (replace `<owner>/<repo>`):
+
+```html
+<a href="https://github.com/eliorpom-cmd/lgtm.md"><img src="https://github.com/<owner>/<repo>/raw/lgtm-md/grass.gif" alt="Commits of the last 90 days" width="100%"></a>
+```
+
+Widgets available for a repository: `flame`, `counter`, `hourglass`, `ecg`, `departures`, `donut`, `grass`, `cherry-tree`, `forest`, `fireworks`, `fireworks-commits`, `records`. `median` and the duels compare accounts, so they are refused in this mode.
+
+What gets counted for a repository:
+
+- **Commits** are the commits on the default branch, all authors, merges included, by commit date (UTC). They replace contributions on every widget. Counting them takes a few seconds for most repositories, about two minutes for the very largest (the Linux kernel).
+- **Pull requests** are the ones merged into the repository.
+- **Stars** are the repository's total, on the `departures` board in place of the streak. GitHub no longer lists who starred a repository or when, so there is no daily star count.
+- **Languages** are the repository's own, weighted by size. Commits take the repository's main language, as they do in account mode, so `hourglass` and `fireworks-commits` show a single colour.
+
+</details>
 
 ## Widgets
 
@@ -213,34 +243,13 @@ Every GIF has a thin band underneath that says what it shows and when it was las
 - **Each pillar** is one day (one week for the 12-month duel), both sides on the same scale. The power bars at the top fill up to each total, and the winner is crowned.
 - Write `duel-torvalds` for 30 days, `duel-torvalds-7` for a week, `duel-torvalds-365` for a year. For a login that itself ends in `-7` or `-365`, add the period: `duel-<login>-30`. Your friend's side only uses public data.
 
-## Use it on a project README
-
-The same widgets can draw a repository instead of an account: its commits, merged pull requests, languages and stars. Set the `repo` input, and publish the GIFs on a separate branch: a nightly commit on the default branch would count as activity, and the streak would never end.
-
-**1. Add the workflow.** In your project repository, create `.github/workflows/lgtm-md.yml` from [`examples/repo-workflow.yml`](examples/repo-workflow.yml). It draws the widgets every night and replaces a single commit on a `lgtm-md` branch, so that branch never grows. The default token is enough, private repository included: no secret to set. GitHub pauses scheduled workflows in a public repository after 60 days without activity; if your widgets stop updating, turn the workflow back on in the **Actions** tab.
-
-**2. Show them in your README**, from that branch (replace `<owner>/<repo>`):
-
-```html
-<a href="https://github.com/eliorpom-cmd/lgtm.md"><img src="https://github.com/<owner>/<repo>/raw/lgtm-md/grass.gif" alt="Commits of the last 90 days" width="100%"></a>
-```
-
-Widgets available for a repository: `flame`, `counter`, `hourglass`, `ecg`, `departures`, `donut`, `grass`, `cherry-tree`, `forest`, `fireworks`, `fireworks-commits`, `records`. `median` and the duels compare accounts, so they are refused in this mode.
-
-What gets counted for a repository:
-
-- **Commits** are the commits on the default branch, all authors, merges included, by commit date (UTC). They replace contributions on every widget. Counting them takes a few seconds for most repositories, about two minutes for the very largest (the Linux kernel).
-- **Pull requests** are the ones merged into the repository.
-- **Stars** are the repository's total, on the `departures` board in place of the streak. GitHub no longer lists who starred a repository or when, so there is no daily star count.
-- **Languages** are the repository's own, weighted by size. Commits take the repository's main language, as they do in account mode, so `hourglass` and `fireworks-commits` show a single colour.
-
 ## Action inputs
 
 | Input | Default | What it does |
 | --- | --- | --- |
 | `token` | `github.token` | Token used to read your activity. See [private activity](#count-your-private-activity-optional). |
 | `user` | the repository owner | GitHub login to draw. |
-| `repo` | empty | A repository written `owner/name`: draws it instead of an account (see [project README](#use-it-on-a-project-readme)). |
+| `repo` | empty | A repository written `owner/name`: draws it instead of an account (see [project README](#project-readme)). |
 | `widgets` | every widget except duels | Widget names, separated by spaces or new lines. |
 | `output-dir` | `widgets` | Folder where the GIFs are written. |
 
