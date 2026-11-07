@@ -2,6 +2,7 @@
 //!
 //! Usage: lgtm-md <data.json> [names...] [--out DIR] [--stills] [--loop] [--raw DIR] [--raw-only]
 //!        lgtm-md collect <login> [out.json] [friend...]
+//!        lgtm-md collect --repo <owner/name> [out.json]
 //!        lgtm-md duel-logins <names...>   (rivals to collect for these widget names)
 //!        lgtm-md pycheck <cases.json>   (parity check of the Python primitives)
 
@@ -23,6 +24,7 @@ LGTM.md: animated pixel-art widgets for a GitHub profile README.
 
 Usage:
   lgtm-md collect <login> [data.json] [friend...]   read an account's activity from GitHub
+  lgtm-md collect --repo <owner/name> [data.json]   read a repository's activity instead
   lgtm-md <data.json> [widget...] [--out DIR]       draw the widgets as GIFs (default: out/)
 
 Options:
@@ -31,7 +33,8 @@ Options:
   --loop       loop every animation, including the hourglass that plays once
   -h, --help   show this help
 
-Without widget names, every widget except the duels is drawn. Duels: duel-<login>,
+Without widget names, every widget except the duels is drawn. In project mode (a
+repository), median and duels are not available. Duels: duel-<login>,
 duel-<login>-7 or duel-<login>-365, for a friend passed to collect.
 The token comes from GITHUB_TOKEN, else GH_TOKEN, else `gh auth token`.
 Widgets: flame counter hourglass ecg departures donut grass cherry-tree forest
@@ -107,12 +110,23 @@ fn main() {
         std::process::exit(1);
     });
     export::configure(export::Output { dir: out, raw, raw_only, stills, loop_all });
+    if let Some(repo) = &data.repo {
+        brand::set_project(repo);
+    }
     let catalog = widgets::catalog();
     if names.is_empty() {
         // Duels need a rival collected in data.json: only drawn when named.
-        names = catalog.iter().map(|(key, _)| key.to_string()).filter(|key| !key.starts_with("duel-")).collect();
+        names = catalog
+            .iter()
+            .map(|(key, _)| key.to_string())
+            .filter(|key| !key.starts_with("duel-") && !(data.is_project() && widgets::ACCOUNT_ONLY.contains(&key.as_str())))
+            .collect();
     }
     for name in &names {
+        if data.is_project() && (widgets::ACCOUNT_ONLY.contains(&name.as_str()) || widgets::parse_duel(name).is_some()) {
+            eprintln!("{name}: compares accounts, so it has no meaning for a repository; leave it out in project mode");
+            std::process::exit(2);
+        }
         if widgets::find(&catalog, name).is_none() {
             eprintln!("unknown widget: {name:?} (known: {}, or duel-<login>[-7|-30|-365])",
                 catalog.iter().map(|(key, _)| *key).collect::<Vec<_>>().join(", "));

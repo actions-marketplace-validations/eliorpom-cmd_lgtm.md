@@ -93,6 +93,8 @@ fn screw_color(key: u8) -> Rgb {
 pub fn render(data: &Data) -> String {
     let total = data.total_contributions.max(0);
     let yesterday = data.year_days().last().map_or(0, |day| day.count).min(total);
+    // "CONTRIBUTIONS" for an account, "COMMITS" for a repository.
+    let title = data.unit(2);
     let start = total - yesterday;
     let digits = 5.max(total.to_string().len() as i64);
 
@@ -113,7 +115,7 @@ pub fn render(data: &Data) -> String {
     let draw = |t: f64| -> Canvas {
         let mut canvas = Canvas::new(W, H);
         panel(&mut canvas, BG, BORDER);
-        canvas.text_center(W as f64 / 2.0, 5.0, "CONTRIBUTIONS", TEXT, Font::F57, 2, Some([8, 10, 14]));
+        canvas.text_center(W as f64 / 2.0, 5.0, title, TEXT, Font::F57, 2, Some([8, 10, 14]));
 
         // Plate with bevels and a brushed grain.
         for y in BOX_Y0..=BOX_Y1 {

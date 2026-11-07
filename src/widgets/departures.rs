@@ -97,18 +97,23 @@ fn stats(data: &Data) -> Vec<(String, Cells)> {
         (
             "LAST 12 MONTHS".to_string(),
             compact(total),
-            if total == 1 { "CONTRIBUTION" } else { "CONTRIBUTIONS" }.to_string(),
+            data.unit(total).to_string(),
         ),
         (
             "LAST 30 DAYS".to_string(),
             compact(prs),
             if prs == 1 { "PR MERGED" } else { "PRS MERGED" }.to_string(),
         ),
-        (
-            "CURRENT STREAK".to_string(),
-            compact(streak),
-            if streak == 1 { "DAY IN A ROW" } else { "DAYS IN A ROW" }.to_string(),
-        ),
+        // A repository shows its stars; an account, its streak.
+        if data.is_project() {
+            ("ALL TIME".to_string(), compact(data.stars), if data.stars == 1 { "STAR" } else { "STARS" }.to_string())
+        } else {
+            (
+                "CURRENT STREAK".to_string(),
+                compact(streak),
+                if streak == 1 { "DAY IN A ROW" } else { "DAYS IN A ROW" }.to_string(),
+            )
+        },
     ];
     match language {
         Some((name, share)) => {
@@ -318,7 +323,8 @@ fn draw_board() -> Canvas {
 }
 
 fn footer(canvas: &mut Canvas, login: &str) {
-    let text: String = login.to_uppercase().chars().take(30).collect();
+    // The board has no underscore (logins never hold one; repository names may).
+    let text: String = login.to_uppercase().replace('_', "-").chars().take(30).collect();
     canvas.text((VALUE_X - 1) as f64, (H - 16) as f64, &text, [92, 88, 80], Font::F35, 2, None);
 }
 

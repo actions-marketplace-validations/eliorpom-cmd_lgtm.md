@@ -524,7 +524,7 @@ fn build_background(data: &Data, weeks: &[i64], empties: &[i64]) -> Canvas {
     }
     // Title.
     let total = data.total_contributions;
-    let word = if total == 1 { "CONTRIBUTION" } else { "CONTRIBUTIONS" };
+    let word = data.unit(total);
     canvas.text(9.0, 8.0, &format!("{total} {word}"), TEXT, Font::F57, 2, Some(SHADOW));
     canvas.text(9.0, 27.0, "12 MONTHS - ONE TREE PER WEEK", MUTED, Font::F35, 2, Some(SHADOW));
     canvas

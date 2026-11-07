@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: eliorpom-cmd/lgtm.md@v1.1.0
+      - uses: eliorpom-cmd/lgtm.md@v1.2.0
         with:
           token: ${{ secrets.LGTM_MD_TOKEN || github.token }}
           widgets: |
@@ -213,22 +213,45 @@ Every GIF has a thin band underneath that says what it shows and when it was las
 - **Each pillar** is one day (one week for the 12-month duel), both sides on the same scale. The power bars at the top fill up to each total, and the winner is crowned.
 - Write `duel-torvalds` for 30 days, `duel-torvalds-7` for a week, `duel-torvalds-365` for a year. For a login that itself ends in `-7` or `-365`, add the period: `duel-<login>-30`. Your friend's side only uses public data.
 
+## Use it on a project README
+
+The same widgets can draw a repository instead of an account: its commits, merged pull requests, languages and stars. Set the `repo` input, and publish the GIFs on a separate branch: a nightly commit on the default branch would count as activity, and the streak would never end.
+
+**1. Add the workflow.** In your project repository, create `.github/workflows/lgtm-md.yml` from [`examples/repo-workflow.yml`](examples/repo-workflow.yml). It draws the widgets every night and replaces a single commit on a `lgtm-md` branch, so that branch never grows. The default token is enough: no secret to set.
+
+**2. Show them in your README**, from that branch (replace `<owner>/<repo>`):
+
+```html
+<a href="https://github.com/eliorpom-cmd/lgtm.md"><img src="https://github.com/<owner>/<repo>/raw/lgtm-md/grass.gif" alt="Commits of the last 90 days" width="100%"></a>
+```
+
+Widgets available for a repository: `flame`, `counter`, `hourglass`, `ecg`, `departures`, `donut`, `grass`, `cherry-tree`, `forest`, `fireworks`, `fireworks-commits`, `records`. `median` and the duels compare accounts, so they are refused in this mode.
+
+What gets counted for a repository:
+
+- **Commits** are the commits on the default branch, all authors, merges included, by commit date (UTC). They replace contributions on every widget.
+- **Pull requests** are the ones merged into the repository.
+- **Stars** are the repository's total, on the `departures` board in place of the streak. GitHub no longer lists who starred a repository or when, so there is no daily star count.
+- **Languages** are the repository's own, weighted by size. Commits take the repository's main language, as they do in account mode, so `hourglass` and `fireworks-commits` show a single colour.
+
 ## Action inputs
 
 | Input | Default | What it does |
 | --- | --- | --- |
 | `token` | `github.token` | Token used to read your activity. See [private activity](#count-your-private-activity-optional). |
 | `user` | the repository owner | GitHub login to draw. |
+| `repo` | empty | A repository written `owner/name`: draws it instead of an account (see [project README](#use-it-on-a-project-readme)). |
 | `widgets` | every widget except duels | Widget names, separated by spaces or new lines. |
 | `output-dir` | `widgets` | Folder where the GIFs are written. |
 
-Pin a release tag such as `@v1.1.0` rather than a branch: a moving reference runs whatever code it points to, with your token.
+Pin a release tag such as `@v1.2.0` rather than a branch: a moving reference runs whatever code it points to, with your token.
 
 ## Run it on your computer
 
 ```sh
 cargo build --release
 ./target/release/lgtm-md collect <login> data.json      # reads your activity with `gh auth token` or GITHUB_TOKEN
+./target/release/lgtm-md collect --repo <owner/name> data.json   # or a repository's activity
 ./target/release/lgtm-md data.json flame grass --out widgets
 ```
 

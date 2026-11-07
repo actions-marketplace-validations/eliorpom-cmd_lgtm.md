@@ -137,9 +137,9 @@ fn streak(days: &[Value]) -> i64 {
     days.iter().rev().take_while(|day| day["contributionCount"].as_i64().unwrap_or(0) != 0).count() as i64
 }
 
-/// Merged PRs since a date, with the main language of their repository.
-/// PRs merged between two dates, both included.
-fn merged_prs(client: &Client, login: &str, first: &str, last: &str) -> Result<Vec<Value>> {
+/// PRs merged between two dates, both included, with the main language of their repository.
+/// `scope` is a search qualifier: `author:<login>` for an account, `repo:<owner/name>` for a repository.
+fn merged_prs(client: &Client, scope: &str, first: &str, last: &str) -> Result<Vec<Value>> {
     let query = r#"
     query($q: String!, $cursor: String) {
       search(query: $q, type: ISSUE, first: 100, after: $cursor) {
@@ -148,7 +148,7 @@ fn merged_prs(client: &Client, login: &str, first: &str, last: &str) -> Result<V
         nodes { ... on PullRequest { mergedAt repository { nameWithOwner primaryLanguage { name color } } } }
       }
     }"#;
-    let q = format!("author:{login} is:pr is:merged merged:{first}..{last}");
+    let q = format!("{scope} is:pr is:merged merged:{first}..{last}");
     let nodes = client.paginate(query, json!({"q": q}), |data| &data["search"])?;
     Ok(nodes
         .iter()
@@ -350,7 +350,7 @@ fn account(client: &Client, login: &str, full: bool, base: &Path) -> Result<Map<
     data.insert("avatar".into(), json!(avatar(client, login, base)?));
     if full {
         let now = today();
-        let prs = merged_prs(client, login, &iso(now - 30), &iso(now - 1))?;
+        let prs = merged_prs(client, &format!("author:{login}"), &iso(now - 30), &iso(now - 1))?;
         let count = prs.len();
         data.insert("merged_prs".into(), json!(prs));
         data.insert("merged_prs_30d".into(), json!(count));
@@ -369,6 +369,9 @@ fn account(client: &Client, login: &str, full: bool, base: &Path) -> Result<Map<
 }
 
 pub fn run(args: &[String]) -> Result<()> {
+    if args.first().map(String::as_str) == Some("--repo") {
+        return run_project(&args[1..]);
+    }
     let login = args.first().ok_or("usage: lgtm-md collect <login> [out.json] [friend...]")?;
     for name in args.iter().take(1).chain(args.iter().skip(2)) {
         if !crate::data::valid_login(name) {
@@ -391,3 +394,133 @@ pub fn run(args: &[String]) -> Result<()> {
     Ok(())
 }
 
+
+// --- Project mode: a repository's activity, in the same data.json shape. ---
+
+/// Days asked per query when counting a repository's commits day by day.
+const DAYS_PER_QUERY: usize = 46;
+
+/// The repository's commits per day on its default branch, all authors, from `first` to
+/// yesterday (UTC). Each day is its own `history(since, until) { totalCount }`, so the count is
+/// exact whatever the repository's size, at a fixed cost of a few queries.
+fn repo_days(client: &Client, owner: &str, name: &str, first: i64) -> Result<Vec<Value>> {
+    let now = today();
+    let all: Vec<i64> = (first..now).collect();
+    let mut days = Vec::new();
+    for chunk in all.chunks(DAYS_PER_QUERY) {
+        let fields: Vec<String> = chunk
+            .iter()
+            .map(|day| {
+                format!(
+                    r#"d{day}: history(since: "{}T00:00:00Z", until: "{}T00:00:00Z") {{ totalCount }}"#,
+                    iso(*day),
+                    iso(day + 1)
+                )
+            })
+            .collect();
+        let query = format!(
+            r#"query($owner: String!, $name: String!) {{ repository(owner: $owner, name: $name) {{ defaultBranchRef {{ target {{ ... on Commit {{ {} }} }} }} }} }}"#,
+            fields.join(" ")
+        );
+        let data = client.graphql(&query, json!({"owner": owner, "name": name}))?;
+        // An empty repository has no default branch: every day is zero.
+        let target = &data["repository"]["defaultBranchRef"]["target"];
+        for day in chunk {
+            let count = target[format!("d{day}")]["totalCount"].as_i64().unwrap_or(0);
+            days.push(json!({"date": iso(*day), "contributionCount": count}));
+        }
+    }
+    Ok(days)
+}
+
+/// Sum of the daily counts inside each window (start included, end excluded), credited to the
+/// repository's main language: a commit is not split by the languages of the files it touches,
+/// exactly as account mode credits a commit to its repository's main language.
+fn windows_by_language(days: &[Value], windows: &[(i64, i64)], language: &Value) -> Vec<Value> {
+    let (name, color) = if language.is_null() {
+        ("Other".to_string(), "#8b949e".to_string())
+    } else {
+        (language["name"].as_str().unwrap_or("Other").to_string(), language["color"].as_str().unwrap_or("#8b949e").to_string())
+    };
+    windows
+        .iter()
+        .map(|(start, end)| {
+            let count: i64 = days
+                .iter()
+                .filter(|day| {
+                    let number = crate::dates::day_number(day["date"].as_str().unwrap_or(""));
+                    number >= *start && number < *end
+                })
+                .map(|day| day["contributionCount"].as_i64().unwrap_or(0))
+                .sum();
+            let languages = if count == 0 { vec![] } else { vec![json!({"name": name, "count": count, "color": color})] };
+            json!({"month": &iso(*start)[..7], "languages": languages})
+        })
+        .collect()
+}
+
+fn project(client: &Client, repo: &str) -> Result<Map<String, Value>> {
+    let (owner, name) = repo.split_once('/').expect("validated");
+    let query = r#"
+    query($owner: String!, $name: String!) {
+      repository(owner: $owner, name: $name) {
+        nameWithOwner stargazerCount
+        primaryLanguage { name color }
+        languages(first: 20, orderBy: {field: SIZE, direction: DESC}) { edges { size node { name color } } }
+      }
+    }"#;
+    let info = client
+        .graphql(query, json!({"owner": owner, "name": name}))
+        .map_err(|e| format!("{e}\n(a private repository needs a token that can read it)"))?;
+    let info = &info["repository"];
+    let full_name = info["nameWithOwner"].as_str().unwrap_or(repo).to_string();
+
+    // Same span as GitHub's contribution calendar: from the Sunday a year ago to yesterday.
+    let now = today();
+    let year_ago = now - 365;
+    let first = year_ago - (year_ago + 4).rem_euclid(7); // 1970-01-01 was a Thursday.
+    let year_days = repo_days(client, owner, name, first)?;
+    // "Last 12 months" on the widgets: the 365 days ending yesterday, not the calendar's extra days.
+    let total: i64 = year_days[year_days.len().saturating_sub(365)..]
+        .iter()
+        .map(|day| day["contributionCount"].as_i64().unwrap_or(0))
+        .sum();
+    let prs = merged_prs(client, &format!("repo:{full_name}"), &iso(now - 30), &iso(now - 1))?;
+    let mut windows = month_windows(12);
+    windows.push((now - 7, now));
+    let mut months = windows_by_language(&year_days, &windows, &info["primaryLanguage"]);
+    let week = months.pop().expect("13 windows");
+
+    let mut data = Map::new();
+    data.insert("login".into(), json!(full_name));
+    data.insert("repo".into(), json!(full_name));
+    data.insert("total_contributions".into(), json!(total));
+    data.insert("streak".into(), json!(streak(&year_days)));
+    data.insert("days".into(), json!(year_days[year_days.len().saturating_sub(DAYS)..]));
+    data.insert("year_days".into(), json!(year_days));
+    data.insert("merged_prs_30d".into(), json!(prs.len()));
+    data.insert("merged_prs".into(), json!(prs));
+    data.insert("languages".into(), json!(languages(std::slice::from_ref(info))));
+    data.insert("commits_by_month".into(), json!(months));
+    data.insert("commits_7d".into(), week["languages"].clone());
+    data.insert("stars".into(), json!(info["stargazerCount"].as_i64().unwrap_or(0)));
+    data.insert("friends".into(), json!({}));
+    Ok(data)
+}
+
+fn run_project(args: &[String]) -> Result<()> {
+    let repo = args.first().ok_or("usage: lgtm-md collect --repo <owner/name> [out.json]")?;
+    if !crate::data::valid_repo(repo) {
+        return Err(format!("not a repository written owner/name: {repo:?}"));
+    }
+    if args.len() > 2 {
+        return Err("duels compare accounts: no rivals in project mode".into());
+    }
+    let out = PathBuf::from(args.get(1).map(String::as_str).unwrap_or("data.json"));
+    let client = Client::new()?;
+    let data = project(&client, repo)?;
+    let text = serde_json::to_string_pretty(&Value::Object(data)).map_err(|e| e.to_string())?;
+    std::fs::write(&out, text).map_err(|e| format!("{}: {e}", out.display()))?;
+    println!("{}", out.display());
+    Ok(())
+}

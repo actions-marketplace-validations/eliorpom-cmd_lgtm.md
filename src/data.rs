@@ -98,6 +98,11 @@ pub struct Data {
     pub commits_7d: Vec<LanguageCount>,
     /// Path of the avatar image, relative to data.json (see `resolve`).
     pub avatar: Option<String>,
+    /// Project mode: "owner/name" of the repository drawn instead of an account.
+    pub repo: Option<String>,
+    /// Project mode: the repository's stars.
+    #[serde(default, deserialize_with = "nullable")]
+    pub stars: i64,
 }
 
 /// A GitHub login: 1 to 39 letters, digits or single hyphens, not starting or ending with one.
@@ -110,6 +115,18 @@ pub fn valid_login(login: &str) -> bool {
         && bytes[0] != b'-'
         && bytes[bytes.len() - 1] != b'-'
         && !login.contains("--")
+}
+
+/// A repository written `owner/name`: a valid login, a slash, then 1 to 100 letters, digits,
+/// `-`, `_` or `.` (not `.` or `..`). It ends up in queries and search strings, like a login.
+pub fn valid_repo(repo: &str) -> bool {
+    let Some((owner, name)) = repo.split_once('/') else { return false };
+    valid_login(owner)
+        && !name.is_empty()
+        && name.len() <= 100
+        && name != "."
+        && name != ".."
+        && name.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_' || b == b'.')
 }
 
 /// Folder of the loaded data.json: files it names (avatars) are relative to it.
@@ -135,6 +152,22 @@ impl Data {
     pub fn year_days(&self) -> &[Day] {
         self.year_days.as_deref().unwrap_or(&[])
     }
+
+    /// True when data.json describes a repository rather than an account.
+    pub fn is_project(&self) -> bool {
+        self.repo.is_some()
+    }
+
+    /// What one unit of activity is called on the widgets: contributions for an account,
+    /// commits for a repository (its default branch).
+    pub fn unit(&self, count: i64) -> &'static str {
+        match (self.is_project(), count == 1) {
+            (false, true) => "CONTRIBUTION",
+            (false, false) => "CONTRIBUTIONS",
+            (true, true) => "COMMIT",
+            (true, false) => "COMMITS",
+        }
+    }
 }
 
 #[cfg(test)]
@@ -150,6 +183,16 @@ mod tests {
         assert_eq!(data.login, "");
         assert_eq!(data.following.unwrap()[0].total, 0);
         assert_eq!(data.merged_prs[0].merged_at, "");
+    }
+
+    #[test]
+    fn repos() {
+        for ok in ["eliorpom-cmd/lgtm.md", "BurntSushi/ripgrep", "a/b_c-d.e", "a/.github"] {
+            assert!(super::valid_repo(ok), "{ok}");
+        }
+        for bad in ["", "a", "a/", "/b", "a/b/c", "a/..", "a/.", "-a/b", "a/b c", "a/b\"", "a/é"] {
+            assert!(!super::valid_repo(bad), "{bad}");
+        }
     }
 
     #[test]

@@ -16,6 +16,9 @@ pub mod hourglass;
 pub mod median;
 pub mod records;
 
+/// Widgets that compare accounts: refused for a repository (as are duels).
+pub const ACCOUNT_ONLY: [&str; 1] = ["median"];
+
 /// (output name, renderer). Gallery order.
 pub type Renderer = fn(&Data) -> String;
 
@@ -65,7 +68,7 @@ mod tests {
 
     #[test]
     fn duel_names() {
-        let parsed = |name| parse_duel(name).map(|(login, days)| (login, days));
+        let parsed = parse_duel;
         assert_eq!(parsed("duel-torvalds"), Some(("torvalds".into(), 30)));
         assert_eq!(parsed("duel-torvalds-7"), Some(("torvalds".into(), 7)));
         assert_eq!(parsed("duel-torvalds-365"), Some(("torvalds".into(), 365)));

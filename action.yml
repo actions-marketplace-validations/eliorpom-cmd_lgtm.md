@@ -15,12 +15,20 @@ inputs:
   user:
     description: GitHub login to draw. Defaults to the owner of the repository running the workflow.
     default: ${{ github.repository_owner }}
+  repo:
+    description: >
+      Project mode: a repository written owner/name (for example octocat/hello-world)
+      whose activity is drawn instead of an account's. Commits on its default branch, all
+      authors; merged pull requests; its languages and stars. median and duels are not
+      available in this mode. Empty: account mode.
+    default: ""
   widgets:
     description: >
       Widgets to draw, separated by spaces or new lines. Duels are written
       duel-<login> (30 days), duel-<login>-7 or duel-<login>-365 (duel-<login>-30 for a
-      login that itself ends in -7 or -365). Empty: every widget except duels.
-    default: flame counter hourglass ecg departures donut grass cherry-tree forest fireworks fireworks-commits records median
+      login that itself ends in -7 or -365). Empty: every widget except duels (and
+      except median in project mode).
+    default: ""
   output-dir:
     description: Folder of the repository where the GIFs are written.
     default: widgets
@@ -70,6 +78,7 @@ runs:
       env:
         GITHUB_TOKEN: ${{ inputs.token }}
         USER_LOGIN: ${{ inputs.user }}
+        PROJECT_REPO: ${{ inputs.repo }}
         WIDGETS: ${{ inputs.widgets }}
         OUTPUT_DIR: ${{ inputs.output-dir }}
       run: |
@@ -77,12 +86,17 @@ runs:
         read -r -a names <<< "$(echo "$WIDGETS" | tr '\n' ' ')"
         # Empty-array expansions are guarded: bash 3.2 (macOS runners) treats them as unset under set -u.
         # Accounts to duel against are collected too (public data only), once each.
-        friends=()
-        while IFS= read -r login; do
-          [ -n "$login" ] && friends+=("$login")
-        done < <("$LGTM_MD_BIN" duel-logins ${names[@]+"${names[@]}"})
         work="$RUNNER_TEMP/lgtm-md-data"
         mkdir -p "$work"
-        "$LGTM_MD_BIN" collect "$USER_LOGIN" "$work/data.json" ${friends[@]+"${friends[@]}"}
+        if [ -n "$PROJECT_REPO" ]; then
+          # Project mode: a repository's activity. Duels and median are refused when drawing.
+          "$LGTM_MD_BIN" collect --repo "$PROJECT_REPO" "$work/data.json"
+        else
+          friends=()
+          while IFS= read -r login; do
+            [ -n "$login" ] && friends+=("$login")
+          done < <("$LGTM_MD_BIN" duel-logins ${names[@]+"${names[@]}"})
+          "$LGTM_MD_BIN" collect "$USER_LOGIN" "$work/data.json" ${friends[@]+"${friends[@]}"}
+        fi
         mkdir -p "$OUTPUT_DIR"
         "$LGTM_MD_BIN" "$work/data.json" ${names[@]+"${names[@]}"} --out "$OUTPUT_DIR"

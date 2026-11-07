@@ -355,6 +355,8 @@ struct Scene {
     best: Option<usize>,
     total: i64,
     span: i64,
+    /// "CONTRIBUTIONS" for an account, "COMMITS" for a repository.
+    unit: &'static str,
 }
 
 fn draw_frame(scene: &Scene, frame: usize) -> Canvas {
@@ -419,7 +421,7 @@ fn draw_frame(scene: &Scene, frame: usize) -> Canvas {
     // Labels on the tube.
     text_pixels(&mut emissive, TX0, SY0 + 5, "LAST 7 DAYS", LABEL, Font::F57, 2);
     let after_title = TX0 + text_width("LAST 7 DAYS", Font::F57, 2) + 8;
-    text_pixels(&mut emissive, after_title, SY0 + 7, "CONTRIBUTIONS", LABEL_DIM, Font::F35, 2);
+    text_pixels(&mut emissive, after_title, SY0 + 7, scene.unit, LABEL_DIM, Font::F35, 2);
     for (day, label) in scene.names.iter().enumerate() {
         let cx = TX0 + day as i64 * DAY_W + DAY_W / 2;
         let color = if scene.best == Some(day) {
@@ -519,6 +521,7 @@ pub fn render(data: &Data) -> String {
         best,
         total,
         span: DAYS * DAY_W + 1,
+        unit: data.unit(2),
     };
     let frames: Vec<Canvas> = (0..LOOP_FRAMES).map(|frame| draw_frame(&scene, frame)).collect();
     // Still: the spot at the far right, the whole week drawn behind it.

@@ -25,8 +25,39 @@ const LINK: Rgb = [214, 220, 226];
 static REGULAR: &[u8] = include_bytes!("../assets/fonts/MonaSans-Regular.ttf");
 static MEDIUM: &[u8] = include_bytes!("../assets/fonts/MonaSans-Medium.ttf");
 
+/// Project mode: the repository's name (without its owner), set once data.json is read.
+static PROJECT: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+
+/// Switches the captions to project mode for the repository `owner/name`.
+pub fn set_project(repo: &str) {
+    let name = repo.rsplit('/').next().unwrap_or(repo).to_string();
+    let _ = PROJECT.set(name);
+}
+
+/// What a widget shows for a repository, for the left of the band.
+fn project_caption(name: &str) -> &'static str {
+    match name {
+        "flame" => "Commit streak",
+        "counter" => "Commits · 12 months",
+        "hourglass" => "Commits · 12 months",
+        "ecg" => "Commits · 7 days",
+        "departures" => "Project stats",
+        "donut" => "Languages",
+        "grass" | "cherry-tree" => "Commits · 90 days",
+        "forest" => "Weekly commits · 12 months",
+        "fireworks" => "Merged PRs · 7 days",
+        "fireworks-commits" => "Commits · 7 days",
+        "records" => "Records · 12 months",
+        _ => "",
+    }
+}
+
 /// What a widget shows, for the left of the band.
 fn caption(name: &str) -> String {
+    if let Some(project) = PROJECT.get() {
+        let what = project_caption(name);
+        return if what.is_empty() { project.clone() } else { format!("{project} · {what}") };
+    }
     let fixed = match name {
         "flame" => "Commit streak",
         "counter" => "Contributions · 12 months",
