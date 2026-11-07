@@ -100,6 +100,9 @@ pub struct Data {
     pub avatar: Option<String>,
     /// Project mode: "owner/name" of the repository drawn instead of an account.
     pub repo: Option<String>,
+    /// Project mode: PRs merged in the 7 days ending yesterday, exact even past the 1000 PRs
+    /// that `merged_prs` can list.
+    pub merged_prs_7d: Option<i64>,
     /// Project mode: the repository's stars.
     #[serde(default, deserialize_with = "nullable")]
     pub stars: i64,

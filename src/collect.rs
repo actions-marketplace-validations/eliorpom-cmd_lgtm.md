@@ -519,10 +519,12 @@ fn project(client: &Client, repo: &str) -> Result<Map<String, Value>> {
         .iter()
         .map(|day| day["contributionCount"].as_i64().unwrap_or(0))
         .sum();
-    let (first_pr, last_pr) = (iso(now - 30), iso(now - 1));
-    let prs = merged_prs(client, &format!("repo:{full_name}"), &first_pr, &last_pr)?;
-    // Search lists 1000 results at most: the count comes from the search total instead.
-    let pr_count = merged_pr_count(client, &format!("repo:{full_name}"), &first_pr, &last_pr)?.max(prs.len() as i64);
+    // Search lists 1000 results at most: counts come from the search total instead, and the
+    // list itself only covers the 7 days the fireworks show, so it stays complete far longer.
+    let scope = format!("repo:{full_name}");
+    let pr_count = merged_pr_count(client, &scope, &iso(now - 30), &iso(now - 1))?;
+    let week_count = merged_pr_count(client, &scope, &iso(now - 7), &iso(now - 1))?;
+    let prs = merged_prs(client, &scope, &iso(now - 7), &iso(now - 1))?;
     let mut windows = month_windows(12);
     windows.push((now - 7, now));
     let mut months = windows_by_language(&year_days, &windows, &info["primaryLanguage"]);
@@ -535,7 +537,8 @@ fn project(client: &Client, repo: &str) -> Result<Map<String, Value>> {
     data.insert("streak".into(), json!(streak(&year_days)));
     data.insert("days".into(), json!(year_days[year_days.len().saturating_sub(DAYS)..]));
     data.insert("year_days".into(), json!(year_days));
-    data.insert("merged_prs_30d".into(), json!(pr_count));
+    data.insert("merged_prs_30d".into(), json!(pr_count.max(prs.len() as i64)));
+    data.insert("merged_prs_7d".into(), json!(week_count.max(prs.len() as i64)));
     data.insert("merged_prs".into(), json!(prs));
     data.insert("languages".into(), json!(languages(std::slice::from_ref(info))));
     data.insert("commits_by_month".into(), json!(months));

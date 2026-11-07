@@ -627,7 +627,8 @@ fn render_mode(data: &Data, commits: bool) -> String {
             let color = colors[&name];
             tally.entry(name).or_insert((color, 0)).1 += 1;
         }
-        let count = prs.len() as i64;
+        // A repository's exact count when more PRs were merged than the search could list.
+        let count = data.merged_prs_7d.unwrap_or(0).max(prs.len() as i64);
         let title = if count == 1 { format!("{count} PR MERGED") } else { format!("{count} PRS MERGED") };
         (shells, title, "LAST 7 DAYS".to_string(), "fireworks")
     };
