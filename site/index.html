@@ -22,40 +22,49 @@
     <p class="name">LGTM.md</p>
     <h1>Looks good to ReadMe.</h1>
     <p>Pixel-art GIFs of your GitHub activity for your README, redrawn every night by a GitHub Action.</p>
+    <ol class="flow">
+      <li>Pick widgets</li>
+      <li>Create a token</li>
+      <li>Commit the workflow</li>
+      <li>Paste the images in your README</li>
+    </ol>
     <p class="meta"><a href="https://github.com/eliorpom-cmd/lgtm.md">Source</a> · <a href="https://github.com/marketplace/actions/lgtm-md">Marketplace</a> · <span data-version>v1.2.0</span> · MIT</p>
   </header>
 
   <section id="widgets">
     <h2>Widgets</h2>
-    <p class="sub">Examples from a made-up account. Add the ones you want to the setup.</p>
+    <p class="sub">Examples from a made-up account. Click Add on the ones you want.</p>
     <ul class="grid" id="grid"></ul>
   </section>
 
   <section id="setup">
     <h2>Setup</h2>
 
-      <div class="mode" role="tablist" aria-label="Where the widgets go">
-        <button role="tab" id="mode-profile" aria-selected="true" data-mode="profile">Profile</button>
-        <button role="tab" id="mode-project" aria-selected="false" data-mode="project">Project</button>
-      </div>
-      <p class="mode-help" id="mode-help"></p>
-
-      <label class="field">
-        <span id="target-label">Your GitHub login</span>
-        <input id="target" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="octocat">
-      </label>
-      <p class="field-error" id="target-error" hidden></p>
-
-      <div class="picked">
-        <div class="picked-head"><span>Widgets</span><button class="link" id="pick-all" type="button">Select all</button></div>
-        <div class="chips" id="chips"></div>
-        <label class="field field-inline" id="rival-field" hidden>
-          <span>Friend to duel</span>
-          <input id="rival" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="torvalds">
-        </label>
-      </div>
-
       <ol class="steps">
+        <li id="pick">
+          <h3>Pick your widgets</h3>
+          <div class="mode" role="tablist" aria-label="Where the widgets go">
+            <button role="tab" id="mode-profile" aria-selected="true" data-mode="profile">Profile</button>
+            <button role="tab" id="mode-project" aria-selected="false" data-mode="project">Project</button>
+          </div>
+          <p class="mode-help" id="mode-help"></p>
+
+          <label class="field">
+            <span id="target-label">Your GitHub login</span>
+            <input id="target" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="octocat">
+          </label>
+          <p class="field-error" id="target-error" hidden></p>
+
+          <div class="picked">
+            <div class="picked-head"><span>Widgets</span><button class="link" id="pick-all" type="button">Select all</button></div>
+            <div class="chips" id="chips"></div>
+            <label class="field field-inline" id="rival-field" hidden>
+              <span>Friend to duel</span>
+              <input id="rival" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="torvalds">
+            </label>
+          </div>
+
+        </li>
         <li id="private">
           <h3>Create a token</h3>
           <p>It lets the widgets count your private activity.</p>
@@ -98,6 +107,7 @@
   </footer>
 
 </main>
+<div class="bar" id="bar" hidden><span id="bar-count"></span><a class="bar-go" href="#setup">Continue to setup</a></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="app.js"></script>
 </body>

@@ -225,6 +225,9 @@ function update() {
     chip.disabled = !ok;
     chip.setAttribute("aria-pressed", String(on));
   }
+  const count = activeWidgets().length;
+  $("#bar-count").textContent = `${count} widget${count === 1 ? "" : "s"} selected`;
+  $("#bar").hidden = count === 0 || state.setupVisible;
   $("#rival-field").hidden = !(state.picked.has("duel") && !project);
   $("#pick-all").textContent = WIDGETS.filter(allowed).every((w) => state.picked.has(w.id)) ? "Clear" : "Select all";
 
@@ -289,6 +292,11 @@ async function copy(text) {
 function toggleWidget(id) {
   if (state.picked.has(id)) state.picked.delete(id);
   else state.picked.add(id);
+  // The selection bar hides once the setup is on screen.
+  if ("IntersectionObserver" in window) {
+    new IntersectionObserver(([en]) => { state.setupVisible = en.isIntersecting; update(); }, { rootMargin: "0px 0px -40% 0px" }).observe($("#setup"));
+  }
+
   update();
 }
 
