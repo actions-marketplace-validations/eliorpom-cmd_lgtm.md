@@ -89,7 +89,13 @@ runs:
         work="$RUNNER_TEMP/lgtm-md-data"
         mkdir -p "$work"
         if [ -n "$PROJECT_REPO" ]; then
-          # Project mode: a repository's activity. Duels and median are refused when drawing.
+          # Project mode: a repository's activity. Widgets that compare accounts are refused
+          # here, before spending a collection on them.
+          for name in ${names[@]+"${names[@]}"}; do
+            case "$name" in
+              median|duel-*) echo "$name compares accounts, so it is not available with repo:" >&2; exit 2 ;;
+            esac
+          done
           "$LGTM_MD_BIN" collect --repo "$PROJECT_REPO" "$work/data.json"
         else
           friends=()

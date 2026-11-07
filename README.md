@@ -217,7 +217,7 @@ Every GIF has a thin band underneath that says what it shows and when it was las
 
 The same widgets can draw a repository instead of an account: its commits, merged pull requests, languages and stars. Set the `repo` input, and publish the GIFs on a separate branch: a nightly commit on the default branch would count as activity, and the streak would never end.
 
-**1. Add the workflow.** In your project repository, create `.github/workflows/lgtm-md.yml` from [`examples/repo-workflow.yml`](examples/repo-workflow.yml). It draws the widgets every night and replaces a single commit on a `lgtm-md` branch, so that branch never grows. The default token is enough: no secret to set.
+**1. Add the workflow.** In your project repository, create `.github/workflows/lgtm-md.yml` from [`examples/repo-workflow.yml`](examples/repo-workflow.yml). It draws the widgets every night and replaces a single commit on a `lgtm-md` branch, so that branch never grows. The default token is enough, private repository included: no secret to set. GitHub pauses scheduled workflows in a public repository after 60 days without activity; if your widgets stop updating, turn the workflow back on in the **Actions** tab.
 
 **2. Show them in your README**, from that branch (replace `<owner>/<repo>`):
 
@@ -229,7 +229,7 @@ Widgets available for a repository: `flame`, `counter`, `hourglass`, `ecg`, `dep
 
 What gets counted for a repository:
 
-- **Commits** are the commits on the default branch, all authors, merges included, by commit date (UTC). They replace contributions on every widget.
+- **Commits** are the commits on the default branch, all authors, merges included, by commit date (UTC). They replace contributions on every widget. Counting them takes a few seconds for most repositories, about two minutes for the very largest (the Linux kernel).
 - **Pull requests** are the ones merged into the repository.
 - **Stars** are the repository's total, on the `departures` board in place of the streak. GitHub no longer lists who starred a repository or when, so there is no daily star count.
 - **Languages** are the repository's own, weighted by size. Commits take the repository's main language, as they do in account mode, so `hourglass` and `fireworks-commits` show a single colour.

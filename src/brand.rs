@@ -34,30 +34,28 @@ pub fn set_project(repo: &str) {
     let _ = PROJECT.set(name);
 }
 
-/// What a widget shows for a repository, for the left of the band.
-fn project_caption(name: &str) -> &'static str {
-    match name {
-        "flame" => "Commit streak",
-        "counter" => "Commits · 12 months",
-        "hourglass" => "Commits · 12 months",
-        "ecg" => "Commits · 7 days",
-        "departures" => "Project stats",
-        "donut" => "Languages",
-        "grass" | "cherry-tree" => "Commits · 90 days",
-        "forest" => "Weekly commits · 12 months",
-        "fireworks" => "Merged PRs · 7 days",
-        "fireworks-commits" => "Commits · 7 days",
-        "records" => "Records · 12 months",
-        _ => "",
+/// What a widget shows for a repository: the account caption, counted in commits.
+fn project_caption(name: &str) -> String {
+    if name == "departures" {
+        return "Project stats".into(); // Commits, merged PRs, stars and the main language.
+    }
+    account_caption(name).replace("Contributions", "Commits").replace("contributions", "commits").replace("Activity", "Commits")
+}
+
+/// What a widget shows, for the left of the band: the repository's name first in project mode.
+/// The second choice drops that name, for narrow widgets.
+fn captions(name: &str) -> [String; 2] {
+    match PROJECT.get() {
+        Some(project) => {
+            let what = project_caption(name);
+            [if what.is_empty() { project.clone() } else { format!("{project} · {what}") }, what]
+        }
+        None => [account_caption(name), account_caption(name)],
     }
 }
 
-/// What a widget shows, for the left of the band.
-fn caption(name: &str) -> String {
-    if let Some(project) = PROJECT.get() {
-        let what = project_caption(name);
-        return if what.is_empty() { project.clone() } else { format!("{project} · {what}") };
-    }
+/// What a widget shows for an account.
+fn account_caption(name: &str) -> String {
     let fixed = match name {
         "flame" => "Commit streak",
         "counter" => "Contributions · 12 months",
@@ -148,19 +146,22 @@ pub fn band(name: &str, band_width: usize) -> (usize, Vec<Rgb>) {
     let regular = FontRef::try_from_slice(REGULAR).expect("bundled font");
     let medium = FontRef::try_from_slice(MEDIUM).expect("bundled font");
     let mut pixels = vec![BACKGROUND; band_width * HEIGHT];
-    let caption = caption(name);
-    let left = Run {
-        text: if caption.is_empty() { updated() } else { format!("{caption} · {}", updated()) },
-        font: &regular,
-        color: QUIET,
-    };
     let middle = Run { text: MOTTO.to_string(), font: &regular, color: QUIET };
     let right = Run { text: REPO.to_string(), font: &medium, color: LINK };
     let full = band_width as f32;
-    let (lw, mw, rw) = (width(&left), width(&middle), width(&right));
+    let gap = 16.0 * HIDPI as f32;
+    let (mw, rw) = (width(&middle), width(&right));
+    // The longest caption that leaves room for the link on the right.
+    let lefts = captions(name).map(|caption| Run {
+        text: if caption.is_empty() { updated() } else { format!("{caption} · {}", updated()) },
+        font: &regular,
+        color: QUIET,
+    });
+    let [first, second] = lefts;
+    let left = if PAD + width(&first) + gap + rw + PAD <= full { first } else { second };
+    let lw = width(&left);
     draw(&mut pixels, band_width, &right, full - PAD - rw);
     // The motto sits centred between the two ends, and only when it has room to breathe.
-    let gap = 16.0 * HIDPI as f32;
     let middle_x = (full - mw) / 2.0;
     let fits_centred = middle_x >= PAD + lw + gap && middle_x + mw <= full - PAD - rw - gap;
     if fits_centred {

@@ -66,6 +66,10 @@ impl Client {
                 Err(ureq::Error::StatusCode(code)) if (502..=504).contains(&code) && attempt < RETRIES => {
                     std::thread::sleep(std::time::Duration::from_secs(3 * attempt as u64));
                 }
+                // A dropped connection is retried the same way.
+                Err(ureq::Error::Io(_)) if attempt < RETRIES => {
+                    std::thread::sleep(std::time::Duration::from_secs(3 * attempt as u64));
+                }
                 Err(error) => return Err(format!("GitHub API: {error}")),
             }
         };
@@ -403,18 +407,27 @@ const DAYS_PER_QUERY: usize = 46;
 /// The repository's commits per day on its default branch, all authors, from `first` to
 /// yesterday (UTC). Each day is its own `history(since, until) { totalCount }`, so the count is
 /// exact whatever the repository's size, at a fixed cost of a few queries.
-fn repo_days(client: &Client, owner: &str, name: &str, first: i64) -> Result<Vec<Value>> {
-    let now = today();
+fn repo_days(client: &Client, owner: &str, name: &str, first: i64, now: i64) -> Result<Vec<Value>> {
     let all: Vec<i64> = (first..now).collect();
     let mut days = Vec::new();
     for chunk in all.chunks(DAYS_PER_QUERY) {
+        days.extend(count_days(client, owner, name, chunk)?);
+    }
+    Ok(days)
+}
+
+/// Commits on each of these days. A very large repository can time out on a full batch:
+/// the batch is then split in two and each half asked again, down to one day.
+fn count_days(client: &Client, owner: &str, name: &str, chunk: &[i64]) -> Result<Vec<Value>> {
+    let mut days = Vec::new();
+    {
         let fields: Vec<String> = chunk
             .iter()
             .map(|day| {
                 format!(
-                    r#"d{day}: history(since: "{}T00:00:00Z", until: "{}T00:00:00Z") {{ totalCount }}"#,
-                    iso(*day),
-                    iso(day + 1)
+                    // Both ends inside the day: a commit at midnight is never counted twice.
+                    r#"d{day}: history(since: "{0}T00:00:00Z", until: "{0}T23:59:59Z") {{ totalCount }}"#,
+                    iso(*day)
                 )
             })
             .collect();
@@ -422,7 +435,16 @@ fn repo_days(client: &Client, owner: &str, name: &str, first: i64) -> Result<Vec
             r#"query($owner: String!, $name: String!) {{ repository(owner: $owner, name: $name) {{ defaultBranchRef {{ target {{ ... on Commit {{ {} }} }} }} }} }}"#,
             fields.join(" ")
         );
-        let data = client.graphql(&query, json!({"owner": owner, "name": name}))?;
+        let data = match client.graphql(&query, json!({"owner": owner, "name": name})) {
+            Ok(data) => data,
+            Err(error) if chunk.len() > 1 && error.contains("http status: 50") => {
+                let (left, right) = chunk.split_at(chunk.len() / 2);
+                let mut days = count_days(client, owner, name, left)?;
+                days.extend(count_days(client, owner, name, right)?);
+                return Ok(days);
+            }
+            Err(error) => return Err(error),
+        };
         // An empty repository has no default branch: every day is zero.
         let target = &data["repository"]["defaultBranchRef"]["target"];
         for day in chunk {
@@ -431,6 +453,14 @@ fn repo_days(client: &Client, owner: &str, name: &str, first: i64) -> Result<Vec
         }
     }
     Ok(days)
+}
+
+/// How many PRs were merged between two dates, both included, past search's 1000-result cap.
+fn merged_pr_count(client: &Client, scope: &str, first: &str, last: &str) -> Result<i64> {
+    let query = "query($q: String!) { search(query: $q, type: ISSUE, first: 1) { issueCount } }";
+    let q = format!("{scope} is:pr is:merged merged:{first}..{last}");
+    let data = client.graphql(query, json!({"q": q}))?;
+    Ok(data["search"]["issueCount"].as_i64().unwrap_or(0))
 }
 
 /// Sum of the daily counts inside each window (start included, end excluded), credited to the
@@ -469,9 +499,13 @@ fn project(client: &Client, repo: &str) -> Result<Map<String, Value>> {
         languages(first: 20, orderBy: {field: SIZE, direction: DESC}) { edges { size node { name color } } }
       }
     }"#;
-    let info = client
-        .graphql(query, json!({"owner": owner, "name": name}))
-        .map_err(|e| format!("{e}\n(a private repository needs a token that can read it)"))?;
+    let info = client.graphql(query, json!({"owner": owner, "name": name})).map_err(|e| {
+        if e.contains("Could not resolve") {
+            format!("{e}\n{repo} not found: check the name; a private repository needs a token that can read it")
+        } else {
+            e
+        }
+    })?;
     let info = &info["repository"];
     let full_name = info["nameWithOwner"].as_str().unwrap_or(repo).to_string();
 
@@ -479,13 +513,16 @@ fn project(client: &Client, repo: &str) -> Result<Map<String, Value>> {
     let now = today();
     let year_ago = now - 365;
     let first = year_ago - (year_ago + 4).rem_euclid(7); // 1970-01-01 was a Thursday.
-    let year_days = repo_days(client, owner, name, first)?;
+    let year_days = repo_days(client, owner, name, first, now)?;
     // "Last 12 months" on the widgets: the 365 days ending yesterday, not the calendar's extra days.
     let total: i64 = year_days[year_days.len().saturating_sub(365)..]
         .iter()
         .map(|day| day["contributionCount"].as_i64().unwrap_or(0))
         .sum();
-    let prs = merged_prs(client, &format!("repo:{full_name}"), &iso(now - 30), &iso(now - 1))?;
+    let (first_pr, last_pr) = (iso(now - 30), iso(now - 1));
+    let prs = merged_prs(client, &format!("repo:{full_name}"), &first_pr, &last_pr)?;
+    // Search lists 1000 results at most: the count comes from the search total instead.
+    let pr_count = merged_pr_count(client, &format!("repo:{full_name}"), &first_pr, &last_pr)?.max(prs.len() as i64);
     let mut windows = month_windows(12);
     windows.push((now - 7, now));
     let mut months = windows_by_language(&year_days, &windows, &info["primaryLanguage"]);
@@ -498,7 +535,7 @@ fn project(client: &Client, repo: &str) -> Result<Map<String, Value>> {
     data.insert("streak".into(), json!(streak(&year_days)));
     data.insert("days".into(), json!(year_days[year_days.len().saturating_sub(DAYS)..]));
     data.insert("year_days".into(), json!(year_days));
-    data.insert("merged_prs_30d".into(), json!(prs.len()));
+    data.insert("merged_prs_30d".into(), json!(pr_count));
     data.insert("merged_prs".into(), json!(prs));
     data.insert("languages".into(), json!(languages(std::slice::from_ref(info))));
     data.insert("commits_by_month".into(), json!(months));

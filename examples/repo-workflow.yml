@@ -14,6 +14,8 @@ on:
 
 permissions:
   contents: write
+  # Lets the default token see the pull requests of a private repository.
+  pull-requests: read
 
 concurrency: lgtm-md
 
