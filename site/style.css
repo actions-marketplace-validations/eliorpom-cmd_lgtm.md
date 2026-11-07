@@ -278,13 +278,16 @@ html.modal-open { overflow: hidden; }
 }
 @media (max-width: 640px) {
   :root { --gut: var(--s-16); }
-  .nav .star { padding: 0 var(--s-8); }
+  .nav .star { padding: 0 var(--s-12); }
+  /* The icon and the count say it: the word goes, so the logo keeps its room. */
+  .star-label { display: none; }
+  .star-count { margin-left: 0; }
   .hero { padding-top: var(--s-48); }
   .lead { font-size: 18px; }
   .sec { margin-top: var(--s-64); }
   .sec-head p { font-size: 18px; }
   /* Gallery becomes a swipeable strip. */
-  .grid { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: var(--s-12); margin: 0 calc(-1 * var(--gut)); padding: 0 var(--gut) var(--s-8); scrollbar-width: none; }
+  .grid { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: var(--gut); gap: var(--s-12); margin: 0 calc(-1 * var(--gut)); padding: 0 var(--gut) var(--s-8); scrollbar-width: none; }
   .card { flex: 0 0 84vw; scroll-snap-align: start; }
   .filters { margin-right: calc(-1 * var(--gut)); padding-right: var(--gut); -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); }
   /* The dialog takes the whole screen; the footer stays at the bottom. */
