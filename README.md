@@ -71,7 +71,7 @@ From then on, the widgets redraw themselves every night.
 
 With the default token, the widgets only see public activity. To count your work in private repositories too, give the Action a read-only token:
 
-1. Open this pre-filled link: [create a fine-grained token](https://github.com/settings/personal-access-tokens/new?name=LGTM.md&description=Read-only+token+for+LGTM.md&expires_in=366&contents=read&pull_requests=read). It asks for **Contents** and **Pull requests**, both read-only.
+1. Open this pre-filled link: [create a fine-grained token](https://github.com/settings/personal-access-tokens/new?name=LGTM.md&description=Read-only+token+for+LGTM.md&expires_in=none&contents=read&pull_requests=read). It asks for **Contents** and **Pull requests**, both read-only, and no expiration, so the widgets never stop updating.
 2. Under **Repository access**, choose **All repositories**. The link cannot set this one for you.
 3. Click **Generate token** and copy it.
 4. In your profile repository, go to **Settings → Secrets and variables → Actions → New repository secret**. Name it `LGTM_MD_TOKEN` and paste the token.
@@ -80,7 +80,7 @@ The workflow above already uses `LGTM_MD_TOKEN` when it exists. The token can on
 
 One limit comes from GitHub: a fine-grained token covers the repositories of a single owner, so pull requests in **another organization's private repositories** are not counted. Everything else is: private commits, private repositories' languages and their history.
 
-The token expires after a year at most. GitHub emails you before it does; create a new one and replace the secret.
+The link sets no expiration, so the widgets keep updating without you renewing anything. If you prefer an expiry date, pick one on the form: GitHub emails you before the token expires, then create a new one and replace the secret.
 
 ## Widgets
 
