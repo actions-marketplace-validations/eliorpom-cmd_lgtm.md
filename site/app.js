@@ -295,7 +295,7 @@ function renderPreview(t) {
     $("#md-body").innerHTML = `<div class="md-empty">${duelPending() ? "Type a friend’s login for the duel and it shows here." : "Pick a widget and it shows here, at the size it takes in your README."}</div>`;
     return;
   }
-  const imgs = list.map((w) => `<a href="${REPO_URL}" tabindex="-1"><img src="widgets/${w.file || w.id}.gif" alt="${esc(w.alt)}" width="${w.width}"></a>`).join("\n");
+  const imgs = list.map((w) => `<a href="${REPO_URL}" tabindex="-1"><img src="widgets/${w.file || w.id}.gif" alt="${esc(w.alt)}" width="${w.width}" style="aspect-ratio:${w.w}/${w.h}"></a>`).join("\n");
   $("#md-body").innerHTML = `<p>${imgs}</p><p><sub>Made with <a href="${REPO_URL}" tabindex="-1">LGTM.md</a></sub></p>`;
 }
 
@@ -506,13 +506,6 @@ function renderPicks() {
     </button></li>`).join("");
 }
 
-// The README of step 2, small: the picked GIFs side by side.
-function renderStrip(t) {
-  $("#strip-path").textContent = state.mode === "project" ? `${t.owner} / ${t.repo} / README.md` : `${t.owner} / README.md`;
-  const list = pickedWidgets();
-  $("#strip-row").innerHTML = list.map((w) => `<img src="widgets/${w.file || w.id}.gif" alt="${esc(w.alt)}" width="${w.w}" height="${w.h}">`).join("");
-}
-
 function update() {
   const t = targetInfo();
   const project = state.mode === "project";
@@ -560,7 +553,6 @@ function update() {
   $("#rival-error").hidden = !rErr;
   $("#rival-error").textContent = rErr;
   $("#rival").setAttribute("aria-invalid", String(!!rErr));
-  renderStrip(t);
 
   // Steps 3 to 6: links into the visitor's repository.
   const repoUrl = `https://github.com/${t.owner}/${t.repo}`;
@@ -597,7 +589,7 @@ function update() {
   $("#actions-link").href = `${repoUrl}/actions`;
   const result = $("#result-link");
   result.href = project ? repoUrl : `https://github.com/${t.owner}`;
-  result.textContent = project ? "Open your repository ↗" : "Open your GitHub profile ↗";
+  result.innerHTML = project ? "<span>Open your repository ↗</span>" : `<span>Open your <span class="wide-only">GitHub </span>profile ↗</span>`;
   $("#tip-secret").hidden = project;
 
   // Shell: header, progress bar, the current pane, the footer.
@@ -618,6 +610,7 @@ function update() {
   $("#skip-token").hidden = state.step !== "token";
   $("#close-text").hidden = state.step !== "check";
 
+  fitAll();
   saveUrl();
 }
 
@@ -658,6 +651,7 @@ function goTo(key, focus = true) {
   if (stepIndex(key) === -1 || stepIndex(key) > lastReachable()) return;
   const back = stepIndex(key) < stepIndex(state.step);
   state.step = key;
+  for (const d of $$("#setup .more[open]")) d.open = false;
   update();
   $("#cfg-body").scrollTop = 0;
   enterPane(back);
@@ -810,16 +804,76 @@ function showRealWidgets(owner, repo, runId) {
   $("#run-path").textContent = project ? `${owner} / ${repo} / README.md` : `${owner} / README.md`;
   const list = activeWidgets();
   const body = $("#run-body");
-  body.innerHTML = `<p>${list.map((w) => `<img src="${base}${actionName(w)}.gif?t=${encodeURIComponent(runId)}" alt="${esc(w.alt)}" width="${w.width}">`).join("")}</p>`;
+  body.innerHTML = `<p>${list.map((w) => `<img src="${base}${actionName(w)}.gif?t=${encodeURIComponent(runId)}" alt="${esc(w.alt)}" width="${w.width}" style="aspect-ratio:${w.w}/${w.h}">`).join("")}</p>`;
   let missing = 0;
   for (const img of body.querySelectorAll("img")) {
     img.addEventListener("error", () => {
       img.remove();
       if (++missing === 1) body.insertAdjacentHTML("beforeend", `<p class="run-missing">Some images aren't served yet: GitHub can take a minute after the run. They will show in your README.</p>`);
+      fitAll();
     }, { once: true });
   }
   $("#run-readme").hidden = false;
   setTheme(state.theme);
+  fitAll();
+}
+
+// The setup never scrolls past step 1: a README preview shrinks its width until the whole README
+// fits the box height, so every picked widget stays visible, smaller, never cropped. Images carry
+// their aspect ratio, so the height is known before they load.
+// When the README is much taller than wide (many widgets), it flows into balanced columns: the
+// layout that keeps the widgets largest wins, one column unless more is clearly better.
+const FIT_GAP = 12;
+function fitColumns(body, n, W, H) {
+  const pad = parseFloat(getComputedStyle(body).paddingLeft) * 2;
+  body.style.columnCount = n > 1 ? String(n) : "";
+  let c = Math.floor((W - pad - (n - 1) * FIT_GAP) / n);
+  for (let i = 0; i < 12 && c > 24; i++) {
+    body.style.width = `${n * c + (n - 1) * FIT_GAP + pad}px`;
+    const h = body.offsetHeight;
+    if (h <= H) return c;
+    c = Math.min(c - 1, Math.floor((c * H) / h));
+  }
+  return 0;
+}
+function fitReadme(fit) {
+  const body = fit.firstElementChild;
+  const W = fit.clientWidth, H = fit.clientHeight;
+  if (!W || !H) return;
+  const count = body.querySelectorAll("img").length;
+  let best = 1, bestC = fitColumns(body, 1, W, H);
+  for (let n = 2; n <= Math.min(5, count); n++) {
+    const c = fitColumns(body, n, W, H);
+    if (c > bestC * 1.15) { best = n; bestC = c; }
+  }
+  if (body.style.columnCount !== (best > 1 ? String(best) : "")) fitColumns(body, best, W, H);
+  else fitColumns(body, best, W, H);
+}
+
+// Long code is clipped by its box, with a fade and a line count; Copy copies all of it.
+function markClipped(pre) {
+  const more = pre.parentElement.querySelector(".code-more");
+  pre.classList.remove("is-clipped");
+  if (more) more.hidden = true;
+  if (!pre.clientHeight || pre.scrollHeight <= pre.clientHeight + 1) return;
+  // The note takes its own row under the code, so count what it leaves hidden.
+  if (more) more.hidden = false;
+  const bottom = pre.getBoundingClientRect().bottom - 24;
+  const hidden = [...pre.querySelectorAll(".ln")].filter((l) => l.getBoundingClientRect().bottom > bottom).length;
+  pre.classList.add("is-clipped");
+  if (more) more.textContent = `${hidden} more line${hidden > 1 ? "s" : ""}, copied with the rest`;
+}
+
+function fitAll() {
+  for (const fit of $$("#setup .fit")) fitReadme(fit);
+  for (const pre of $$("#setup .gh-code")) markClipped(pre);
+}
+
+function setView(view) {
+  const box = $("#readme-box");
+  box.dataset.view = view === "code" ? "code" : "preview";
+  for (const b of $$("button[data-view]")) b.setAttribute("aria-pressed", String(b.dataset.view === box.dataset.view));
+  fitAll();
 }
 
 // README background of the previews: GitHub's dark or light theme. Remembered on this device only.
@@ -1287,6 +1341,8 @@ function init() {
     if (detailBtn) return openDetail(detailBtn.dataset.detail, detailBtn);
     const themeBtn = e.target.closest("[data-theme-set]");
     if (themeBtn) return setTheme(themeBtn.dataset.themeSet);
+    const viewBtn = e.target.closest("button[data-view]");
+    if (viewBtn) return setView(viewBtn.dataset.view);
     if (e.target.closest("#detail-add")) return addFromDetail();
     const pick = e.target.closest(".pick");
     if (pick && !pick.disabled) {
@@ -1321,6 +1377,20 @@ function init() {
   // A click on the dimmed backdrop lands on the dialog itself, outside its content.
   dialog.addEventListener("click", (e) => { if (e.target === dialog) dialog.close(); });
   dialog.addEventListener("close", onClose);
+  // Boxes refit when the dialog changes size or a step shows them.
+  if ("ResizeObserver" in window) {
+    const ro = new ResizeObserver(() => fitAll());
+    for (const el of $$("#setup .fit, #setup .gh-code")) ro.observe(el);
+  }
+  // An open "more" panel covers its step: what lies under it leaves the tab order.
+  dialog.addEventListener("toggle", (e) => {
+    const d = e.target;
+    if (!d.matches || !d.matches(".pane .more")) return;
+    for (let n = d; n && !n.matches(".pane"); n = n.parentElement) {
+      for (const el of n.parentElement.children) if (el !== n) el.inert = d.open;
+    }
+    if (d.open) fitAll();
+  }, true);
   $("#target").addEventListener("input", (e) => { state.target = e.target.value; update(); });
   $("#rival").addEventListener("input", (e) => { state.rival = e.target.value; update(); });
   // Enter in a field moves on when the step is valid.

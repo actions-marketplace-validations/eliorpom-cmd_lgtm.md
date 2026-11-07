@@ -181,10 +181,6 @@
           <p class="hint" id="rival-help">The duel compares your last 30 days with theirs.</p>
           <p class="field-error" id="rival-error" hidden></p>
         </div>
-        <div class="strip" aria-label="Preview of your README">
-          <p class="strip-head" id="strip-path">your-login / README.md</p>
-          <div class="strip-row" id="strip-row"></div>
-        </div>
       </section>
 
       <section class="pane" data-pane="token" aria-labelledby="pane-token" hidden>
@@ -233,28 +229,28 @@
       <section class="pane" data-pane="readme" aria-labelledby="pane-readme" hidden>
         <h3 class="pane-title" id="pane-readme" tabindex="-1">Add the images to your README</h3>
         <p class="pane-help">Copy these lines, open <a class="text-link" id="readme-link" href="#" target="_blank" rel="noopener">your repository</a>, paste them in README.md where the widgets should go, then commit.</p>
-        <div class="gh gh-file">
-          <div class="gh-bar">
-            <span class="gh-name">README.md</span>
-            <button class="copy pill-btn small" data-copy="html" type="button">Copy README</button>
+        <div class="readme-tools">
+          <div class="seg view-seg" role="group" aria-label="What the box shows">
+            <button type="button" data-view="preview" aria-pressed="true">Preview</button>
+            <button type="button" data-view="code" aria-pressed="false">Code</button>
           </div>
-          <pre class="gh-code" id="html"></pre>
+          <button class="copy pill-btn" data-copy="html" type="button">Copy README</button>
         </div>
-        <details class="more" id="preview-more">
-          <summary>Show preview</summary>
-          <div class="gh gh-preview gh-theme" data-theme="dark">
-            <div class="md-head">
-              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
-              <span id="md-path">your-login / README.md</span>
-              <div class="seg theme-seg" role="group" aria-label="README background">
-                <button type="button" data-theme-set="dark" aria-pressed="true">Dark</button>
-                <button type="button" data-theme-set="light" aria-pressed="false">Light</button>
-              </div>
+        <div class="gh fit-box gh-theme" id="readme-box" data-theme="dark" data-view="preview">
+          <div class="md-head">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+            <span class="md-path" id="md-path">your-login / README.md</span>
+            <div class="seg theme-seg" role="group" aria-label="README background">
+              <button type="button" data-theme-set="dark" aria-pressed="true">Dark</button>
+              <button type="button" data-theme-set="light" aria-pressed="false">Light</button>
             </div>
-            <div class="md-body" id="md-body"></div>
           </div>
-        </details>
-        <p class="hint">The last line, Made with LGTM.md, is optional.</p>
+          <div class="fit" id="md-fit"><div class="md-body" id="md-body"></div></div>
+          <div class="code-box">
+            <pre class="gh-code" id="html"></pre>
+            <p class="code-more" id="html-more" hidden></p>
+          </div>
+        </div>
       </section>
 
       <section class="pane pane-done" data-pane="check" aria-labelledby="pane-check" hidden>
@@ -266,21 +262,21 @@
           <p class="run-detail" id="run-detail"></p>
         </div>
         <div class="pane-actions">
-          <a class="pill-btn wide" id="result-link" href="#" target="_blank" rel="noopener">Open your GitHub profile ↗</a>
-          <a class="pill-btn ghost wide" id="actions-link" href="#" target="_blank" rel="noopener">Check the Actions run ↗</a>
+          <a class="pill-btn" id="result-link" href="#" target="_blank" rel="noopener">Open your GitHub profile ↗</a>
+          <a class="pill-btn ghost" id="actions-link" href="#" target="_blank" rel="noopener"><span>Check the <span class="wide-only">Actions </span>run ↗</span></a>
         </div>
-        <div class="gh run-readme gh-theme" id="run-readme" data-theme="dark" hidden>
+        <div class="gh run-readme fit-box gh-theme" id="run-readme" data-theme="dark" hidden>
           <div class="md-head">
             <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
-            <span id="run-path">your-login / README.md</span>
+            <span class="md-path" id="run-path">your-login / README.md</span>
             <div class="seg theme-seg" role="group" aria-label="README background">
               <button type="button" data-theme-set="dark" aria-pressed="true">Dark</button>
               <button type="button" data-theme-set="light" aria-pressed="false">Light</button>
             </div>
           </div>
-          <div class="md-body" id="run-body"></div>
+          <div class="fit" id="run-fit"><div class="md-body" id="run-body"></div></div>
         </div>
-        <details class="more">
+        <details class="more more-quiet">
           <summary>If an image stays broken</summary>
           <div class="more-body">
             <ul>
@@ -291,13 +287,13 @@
           </div>
         </details>
         <div class="support">
-          <div class="support-note">
+          <p class="support-note">
             <svg class="heart" viewBox="0 0 9 8" aria-hidden="true" shape-rendering="crispEdges" fill="currentColor"><path d="M1 0h2v1H1zM6 0h2v1H6zM0 1h4v1H0zM5 1h4v1H5zM0 2h9v2H0zM1 4h7v1H1zM2 5h5v1H2zM3 6h3v1H3zM4 7h1v1H4z"/></svg>
-            <p>LGTM.md is free and open source. If it saved you time, you can support it on Ko-fi.</p>
-          </div>
+            LGTM.md is free and open source.
+          </p>
           <div class="support-row">
             <a class="pill-btn small ghost" href="https://ko-fi.com/eliorpom" target="_blank" rel="noopener">Support on Ko-fi ↗</a>
-            <a class="text-link" href="https://github.com/eliorpom-cmd/lgtm.md" target="_blank" rel="noopener">Star it on GitHub</a>
+            <a class="pill-btn small ghost" href="https://github.com/eliorpom-cmd/lgtm.md" target="_blank" rel="noopener">Star on GitHub ↗</a>
           </div>
         </div>
       </section>

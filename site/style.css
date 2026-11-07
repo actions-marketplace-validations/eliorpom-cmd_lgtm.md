@@ -286,10 +286,6 @@ html.modal-open { overflow: hidden; }
 .repo-note .check { margin: 0; }
 .repo-note .text-link { font-size: 14px; }
 .rival { margin-top: var(--s-8); }
-.strip { margin-top: var(--s-24); border: 1px solid var(--gh-line); border-radius: var(--s-12); background: var(--gh-bg); overflow: hidden; }
-.strip-head { padding: var(--s-8) var(--s-12); border-bottom: 1px solid var(--gh-line); font: 600 13px/1.4 var(--sans); color: var(--gh-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.strip-row { display: flex; gap: var(--s-8); padding: var(--s-12); max-height: 180px; overflow-x: auto; scrollbar-width: thin; }
-.strip-row img { flex: none; width: auto; height: 96px; max-width: none; }
 
 /* Steps 3 to 5 */
 .token-steps { margin: var(--s-24) 0 0; padding-left: var(--s-24); display: grid; gap: var(--s-8); font-size: 15px; }
@@ -436,7 +432,6 @@ html.modal-open { overflow: hidden; }
   .ln { grid-template-columns: 16px minmax(0, 1fr); column-gap: var(--s-8); padding-right: var(--s-8); }
   .lc { --hang: 2ch; }
   .gh-code { font-size: 12px; }
-  .strip-row img { height: 72px; }
   .facts { grid-template-columns: minmax(0, 1fr); gap: 0; margin-top: var(--s-64); }
   .closing { grid-template-columns: minmax(0, 1fr); gap: var(--s-32); margin-top: var(--s-64); padding: var(--s-32) var(--s-24); }
   .closing-mark { order: -1; width: 64px; height: 64px; margin: 0; }
@@ -451,3 +446,104 @@ html.modal-open { overflow: hidden; }
 /* Pixel burst on "Copied". */
 .burst { z-index: 40; width: 0; height: 0; pointer-events: none; }
 .burst span { position: absolute; left: 0; top: 0; width: 4px; height: 4px; }
+
+/* Setup without page scroll: every step fills the fixed frame. Step 1 scrolls its tile grid only;
+   steps 2 to 6 fit, with one flexible box (the README) that scales its content to the space left,
+   and "more" panels that open over the step instead of growing it. */
+#setup .cfg-head { padding: 20px var(--s-24) 0 var(--s-32); }
+#setup .cfg-body { display: flex; flex-direction: column; overflow-y: auto; padding: var(--s-24) var(--s-32) var(--s-16); }
+#setup .pane { position: relative; flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+#setup .pane[hidden] { display: none; }
+#setup .pane > * { flex: none; }
+#setup .pane-title { font-size: clamp(22px, 4.5vw + 6px, 28px); }
+#setup .pane-help { font-size: 15px; }
+#setup .cfg-foot { padding: var(--s-12) var(--s-32) 20px; }
+
+/* Step 1: the tiles scroll under a fixed title and tool row, with a fade at the bottom edge. */
+.pane-tools { margin: var(--s-16) 0 var(--s-12); }
+#setup .pick-layout { flex: 1 1 0; min-height: 0; display: flex; }
+#setup .picks { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; align-content: start; margin: -3px; padding: 3px 3px var(--s-32); scrollbar-width: thin; -webkit-mask-image: linear-gradient(#000 calc(100% - 40px), transparent); mask-image: linear-gradient(#000 calc(100% - 40px), transparent); }
+.pick-note { font-size: 13px; }
+
+/* Step 5: Preview or Code in the same box. */
+.readme-tools { display: flex; align-items: center; justify-content: space-between; gap: var(--s-12); margin-top: var(--s-16); }
+.view-seg button { height: 28px; }
+.fit-box { display: flex; flex-direction: column; min-height: 0; }
+#setup .pane > .fit-box { flex: 1 1 0; min-height: 96px; margin-top: var(--s-12); }
+.fit-box .md-head { gap: var(--s-8); }
+.md-path { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fit { flex: 1 1 0; min-height: 0; overflow: hidden; display: flex; justify-content: center; }
+.fit .md-body { flex: none; align-self: flex-start; padding: var(--s-12) var(--s-16); column-gap: 12px; }
+.fit .md-body p { orphans: 1; widows: 1; }
+.fit .md-body p { margin-bottom: var(--s-8); }
+.fit .md-body img { height: auto; }
+.code-box { flex: 1 1 0; min-height: 0; display: none; flex-direction: column; }
+.fit-box[data-view="code"] .code-box { display: flex; }
+.fit-box[data-view="code"] .fit, .fit-box[data-view="code"] .theme-seg { display: none; }
+/* The code keeps GitHub's dark colours whatever the preview background. */
+.gh-theme[data-view="code"] { --gh-bg: #0d1117; --gh-line: #30363d; --gh-text: #e6edf3; --gh-faint: #6e7681; }
+#setup .gh-code { flex: 1 1 0; min-height: 0; max-height: none; overflow: hidden; padding: var(--s-12) 0; }
+.gh-code.is-clipped { -webkit-mask-image: linear-gradient(#000 calc(100% - 48px), transparent); mask-image: linear-gradient(#000 calc(100% - 48px), transparent); }
+.code-more { flex: none; padding: var(--s-8) var(--s-16); border-top: 1px solid var(--gh-line); text-align: center; font: 400 13px/1.4 var(--sans); color: var(--gh-faint); }
+
+/* "More" panels open over their step, sized to it. */
+#setup .pane .more[open] { position: absolute; inset: 0; z-index: 3; margin: 0; max-width: none; display: flex; flex-direction: column; background: var(--panel); text-align: left; animation: more-in 160ms var(--ease); }
+@keyframes more-in { from { opacity: 0; transform: translateY(6px); } }
+#setup .pane .more[open] > :not(summary) { flex: 1 1 0; min-height: 0; overflow: hidden; }
+#setup .more[open] .gh { position: absolute; top: 49px; left: var(--s-12); right: var(--s-12); bottom: var(--s-12); margin: 0; display: flex; flex-direction: column; }
+#setup .more[open] .gh-file .code-box { display: flex; }
+
+/* Step 6: actions side by side, the real GIFs in a box that scales them, a one-line support row. */
+#setup .pane-done { text-align: center; }
+#setup .done-mark { width: 40px; height: 40px; margin: 0 auto var(--s-12); }
+#setup .done-mark .mark { width: 40px; height: 40px; }
+#setup .run { margin-top: var(--s-16); }
+/* Once done, the title says it: the pill leaves the layout, the live region still reads it. */
+#setup .run[data-state="done"] { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); margin: 0; }
+#setup .pane-done > .pane-help { max-width: 62ch; }
+#setup .pane-actions .pill-btn > span { white-space: nowrap; }
+#setup .run-detail[hidden] { display: none; }
+#setup .pane-actions { display: flex; justify-content: center; gap: var(--s-12); max-width: none; margin: var(--s-16) auto 0; }
+#setup .run-readme { margin-top: var(--s-16); }
+#setup .pane > .run-readme:not([hidden]) { flex: 1 1 0; min-height: 96px; }
+#setup .pane > .run-readme[hidden] { display: none; }
+.run-readme .fit .md-body { padding: var(--s-12) var(--s-16); }
+#setup .pane-done .more { margin: var(--s-12) auto 0; }
+.more-quiet { border: 0; }
+.more-quiet summary { padding: var(--s-4) var(--s-8); font-size: 14px; color: var(--muted); text-decoration: underline; text-decoration-color: var(--line-2); text-underline-offset: 4px; }
+.more-quiet summary::after { content: none; }
+#setup .more-quiet[open] { border: 1px solid var(--line-2); border-radius: var(--s-12); }
+#setup .more-quiet[open] summary { padding: var(--s-12) var(--s-16); font-size: 15px; color: var(--text); text-decoration: none; }
+#setup .more-quiet[open] summary::after { content: "−"; margin-left: auto; font: 400 16px/1 var(--mono); color: var(--faint); }
+#setup .support { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--s-8) var(--s-16); margin-top: auto; padding-top: var(--s-16); border-top: 1px solid var(--line); }
+#setup .pane > .support { margin-top: auto; }
+#setup .pane-done > :nth-last-child(2) { margin-bottom: var(--s-16); }
+.support-note { display: inline-flex; align-items: center; gap: var(--s-8); margin: 0; font-size: 14px; color: var(--faint); }
+.support-row { gap: var(--s-8); }
+
+@media (max-width: 640px) {
+  #setup .cfg-head { padding: var(--s-12) var(--s-16) 0; gap: var(--s-8) var(--s-12); }
+  #setup .cfg-body { padding: var(--s-16) var(--s-16) var(--s-12); }
+  #setup .cfg-foot { padding: var(--s-8) var(--s-16) max(var(--s-12), env(safe-area-inset-bottom)); gap: var(--s-4); }
+  #setup .pane-help { font-size: 14px; margin-top: var(--s-4); }
+  #setup .pane-help + .pill-btn, #setup .pane-help + .field { margin-top: var(--s-16); }
+  #setup .pane > .pill-btn.wide { margin-top: var(--s-16); }
+  #setup .field { margin-top: var(--s-12); }
+  .token-steps { margin-top: var(--s-16); font-size: 14px; }
+  #setup .more { margin-top: var(--s-16); }
+  .wide-only { display: none; }
+  #setup .pane-actions .pill-btn { flex: 1; padding: 0 var(--s-12); }
+  #setup .done-mark, #setup .done-mark .mark { width: 32px; height: 32px; }
+  #setup .done-mark { margin-bottom: var(--s-8); }
+  #setup .run { margin-top: var(--s-12); }
+  #setup .pane-actions, #setup .run-readme { margin-top: var(--s-12); }
+  .run-detail { font-size: 13px; }
+}
+@media (max-width: 380px) { .picked-count { display: none; } }
+/* A friend's login error takes the place of the duel hint. */
+.rival:has(#rival-error:not([hidden])) #rival-help { display: none; }
+@media (max-width: 380px) {
+  /* Logo, Star with its count and the main button fit a 360 px screen. */
+  .nav nav { gap: var(--s-8); }
+  .nav .pill-btn.small { padding: 0 var(--s-8); }
+}
