@@ -79,9 +79,24 @@ function allowed(widget) {
   return state.mode === "profile" || widget.project;
 }
 
-// Widgets that can go in the workflow right now, in gallery order.
-function activeWidgets() {
+// Widgets picked and allowed in the current mode, in gallery order.
+function pickedWidgets() {
   return WIDGETS.filter((w) => state.picked.has(w.id) && allowed(w));
+}
+
+// Widgets that can go in the workflow right now: the duel needs a valid friend login.
+function activeWidgets() {
+  return pickedWidgets().filter((w) => actionName(w));
+}
+
+function rivalError() {
+  const r = state.rival.trim().replace(/^@/, "");
+  return r && !LOGIN_RE.test(r) ? "A GitHub login has letters, digits and single hyphens, up to 39 characters." : "";
+}
+
+// The duel is picked but has no valid friend login yet.
+function duelPending() {
+  return state.picked.has("duel") && state.mode === "profile" && !rivalLogin();
 }
 
 function rivalLogin() {
@@ -231,17 +246,23 @@ function update() {
     card.dataset.picked = String(on);
     card.querySelector(".card-tag").hidden = ok;
     const toggle = card.querySelector(".toggle");
+    const chip = document.querySelector(`.chip[data-id="${w.id}"]`);
     toggle.disabled = !ok;
     toggle.setAttribute("aria-pressed", String(on));
     toggle.textContent = on ? "Added ✓" : "Add";
+    const needs = on && w.id === "duel" && !rivalLogin();
+    card.classList.toggle("needs-login", needs);
+    chip.classList.toggle("needs-login", needs);
     card.classList.toggle("is-picked", on);
-    const chip = document.querySelector(`.chip[data-id="${w.id}"]`);
     chip.disabled = !ok;
     chip.setAttribute("aria-pressed", String(on));
   }
   const count = activeWidgets().length;
   $("#bar-count").textContent = `${count} widget${count === 1 ? "" : "s"} selected`;
   $("#bar").hidden = count === 0 || state.setupVisible;
+  const rErr = rivalError();
+  $("#rival-error").hidden = !rErr;
+  $("#rival-error").textContent = rErr;
   $("#bar-thumbs").innerHTML = activeWidgets().slice(0, 6).map((w) => `<img src="widgets/${w.file || w.id}.gif" alt="">`).join("");
   $("#rival-field").hidden = !(state.picked.has("duel") && !project);
   $("#pick-all").textContent = WIDGETS.filter(allowed).every((w) => state.picked.has(w.id)) ? "Clear" : "Select all";
@@ -260,12 +281,20 @@ function update() {
   const create = $("#create");
   const ready = t.ok && names.length > 0;
   create.setAttribute("aria-disabled", String(!ready));
-  create.href = ready
-    ? `https://github.com/${t.owner}/${t.repo}/new/main?filename=${encodeURIComponent(".github/workflows/lgtm-md.yml")}&value=${encodeURIComponent(yaml)}`
-    : "#setup";
+  // A disabled link has no href, so the keyboard can't follow it either.
+  if (ready) {
+    create.href = `https://github.com/${t.owner}/${t.repo}/new/main?filename=${encodeURIComponent(".github/workflows/lgtm-md.yml")}&value=${encodeURIComponent(yaml)}`;
+    create.target = "_blank";
+  } else {
+    create.removeAttribute("href");
+    create.removeAttribute("target");
+  }
+  $(".gh .copy").disabled = !html;
   const hint = $("#create-hint");
   if (!names.length) {
-    hint.textContent = "Pick a widget first.";
+    hint.textContent = duelPending() ? "Type a friend’s login for the duel." : "Pick a widget first.";
+  } else if (t.error) {
+    hint.textContent = "Fix your login above.";
   } else if (!t.ok) {
     hint.textContent = project ? "Type the repository first." : "Type your login first.";
   } else if (project) {
@@ -313,6 +342,17 @@ async function copy(text) {
   toast("Copied");
 }
 
+// Switching mode keeps the login: Project prefills "login/", Profile keeps the owner part.
+function setMode(mode) {
+  if (mode === state.mode) return update();
+  const raw = state.target.trim();
+  if (mode === "project") state.target = raw && !raw.includes("/") ? `${raw}/` : raw;
+  else state.target = raw.split("/")[0];
+  state.mode = mode;
+  $("#target").value = state.target;
+  update();
+}
+
 function toggleWidget(id) {
   if (state.picked.has(id)) state.picked.delete(id);
   else state.picked.add(id);
@@ -331,10 +371,7 @@ function init() {
     if (toggle && !toggle.disabled) return toggleWidget(toggle.dataset.id);
     const mode = e.target.closest(".mode button");
     if (mode) {
-      state.mode = mode.dataset.mode;
-      state.target = "";
-      $("#target").value = "";
-      return update();
+      return setMode(mode.dataset.mode);
     }
     const tab = e.target.closest(".gh-tab");
     if (tab) {
@@ -365,8 +402,7 @@ function init() {
   // Mode tabs also move with the arrow keys.
   $(".mode").addEventListener("keydown", (e) => {
     if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
-    state.mode = state.mode === "profile" ? "project" : "profile";
-    update();
+    setMode(state.mode === "profile" ? "project" : "profile");
     $(`#mode-${state.mode}`).focus();
   });
 
