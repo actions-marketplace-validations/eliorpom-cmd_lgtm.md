@@ -163,11 +163,32 @@ h3 { font-size: 22px; line-height: 1.25; letter-spacing: -0.02em; }
 .text-btn:hover { color: var(--text); text-decoration-color: var(--text); }
 .pill-btn.wide { width: 100%; }
 
-/* Hero: one column, title, one line, the button and who uses it. */
-.hero { padding-top: var(--s-128); padding-bottom: var(--s-32); display: flex; flex-direction: column; align-items: center; text-align: center; }
-.hero h1 { max-width: none; }
-.hero .lead { margin-left: auto; margin-right: auto; }
-.hero .actions { justify-content: center; }
+/* Hero: copy on the left, a README filling with widgets on the right; stacked on phones. */
+.hero { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--s-64); align-items: center; padding-top: var(--s-64); padding-bottom: var(--s-32); }
+.hero h1 { max-width: 9ch; }
+.hero-art { position: relative; margin: 0; }
+/* A faint grid of square dots behind the README, fading out from its centre. */
+.hero-art::before { content: ""; position: absolute; inset: -48px; z-index: -1; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Crect width='2' height='2' fill='%23fff' fill-opacity='.09'/%3E%3C/svg%3E"); -webkit-mask-image: radial-gradient(closest-side, #000 30%, transparent); mask-image: radial-gradient(closest-side, #000 30%, transparent); pointer-events: none; }
+.readme { background: var(--gh-bg); border: 1px solid var(--gh-line); border-radius: var(--s-12); box-shadow: var(--depth), 0 40px 80px -32px rgba(0, 0, 0, 0.7); overflow: hidden; }
+.readme .md-head { height: 44px; font-weight: 500; }
+.readme-body { display: grid; gap: var(--s-8); padding: var(--s-16); }
+.slot-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-8); }
+.slot { position: relative; background: #161b22; }
+.slot img { position: absolute; inset: 0; width: 100%; height: 100%; transition: opacity 220ms ease; }
+.hero-intro .slot img { opacity: 0; }
+.slot.is-live img { opacity: 1; }
+.readme-sub { margin-top: var(--s-4); font: 400 12px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif; color: var(--gh-text); }
+.readme-sub span { color: #4493f8; }
+/* The intro canvas covers the card; each slot clips its own blocks. */
+.hero-fx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; display: none; }
+.hero-intro .hero-fx { display: block; }
+
+/* Brand mark: a README page with a check, drawn on a 16-pixel grid. */
+.logo { display: inline-flex; align-items: center; gap: var(--s-8); }
+.mark { width: 24px; height: 24px; flex: none; fill: currentColor; }
+.mark-flap { opacity: 0.5; }
+.foot .mark { width: 16px; height: 16px; }
+
 .eyebrow { display: inline-flex; align-items: center; gap: var(--s-12); font: 500 12px/1 var(--sans); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: var(--s-32); }
 .dot { width: 6px; height: 6px; background: var(--green); }
 .lead { margin-top: var(--s-24); font-size: 20px; line-height: 1.5; max-width: 30em; }
@@ -279,7 +300,12 @@ html.modal-open { overflow: hidden; }
   .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .picks { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
+@media (max-width: 880px) {
+  .hero { grid-template-columns: minmax(0, 1fr); gap: var(--s-48); }
+  .hero h1 { max-width: 11ch; }
+}
 @media (max-width: 640px) {
+  .readme-body { padding: var(--s-12); }
   :root { --gut: var(--s-16); }
   .nav .star { padding: 0 var(--s-12); }
   /* The icon and the count say it: the word goes, so the logo keeps its room. */

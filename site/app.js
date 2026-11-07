@@ -601,12 +601,159 @@ async function renderUsed() {
   } catch { /* the row stays hidden */ }
 }
 
+// Hero intro: each widget slot of the README fills with blocks of its own pixels that fall and
+// stack from the bottom row up, the mosaic sharpens in two steps, then the real GIF takes over.
+// Runs once; skipped with reduced motion (the head script never sets hero-intro then).
+const INTRO = {
+  cell: 10,              // native pixels per falling block
+  starts: [0, 200, 340], // ms at which each slot begins
+  rows: 620,             // ms between the bottom row and the top row starting to fall
+  jitter: 140,           // random extra delay per block, ms
+  fall: 420,             // ms a block takes to land
+  drop: [3, 9],          // fall height, in blocks (min, max)
+  sharpen: [5, 2, 1],    // mosaic sizes after landing, native pixels
+  stepMs: 90,
+  fade: 220,
+  loadBudget: 1200,      // give up and show the GIFs if the stills take longer than this
+};
+
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+// The still reduced so one pixel stands for k×k native pixels (averaged by the browser).
+function mosaic(img, k) {
+  const c = document.createElement("canvas");
+  c.width = Math.max(1, Math.round(img.naturalWidth / k));
+  c.height = Math.max(1, Math.round(img.naturalHeight / k));
+  const g = c.getContext("2d", { willReadFrequently: true });
+  g.imageSmoothingEnabled = true;
+  g.imageSmoothingQuality = "high";
+  g.drawImage(img, 0, 0, c.width, c.height);
+  return c;
+}
+
+async function heroIntro() {
+  const root = document.documentElement;
+  const art = $(".hero-art");
+  if (!art || !root.classList.contains("hero-intro")) return;
+  const canvas = art.querySelector(".hero-fx");
+  const slots = [...art.querySelectorAll(".slot")];
+  let raf = 0, done = false;
+  const finish = () => {
+    if (done) return;
+    done = true;
+    cancelAnimationFrame(raf);
+    for (const s of slots) s.classList.add("is-live");
+    root.classList.remove("hero-intro");
+    window.removeEventListener("resize", finish);
+  };
+  if (document.hidden || window.scrollY > art.offsetTop) return finish();
+  window.addEventListener("resize", finish);
+
+  let stills;
+  try {
+    const timeout = new Promise((_, reject) => setTimeout(reject, INTRO.loadBudget));
+    stills = await Promise.race([Promise.all(slots.map((s) => loadImage(s.dataset.still))), timeout]);
+  } catch { return finish(); }
+  if (done) return;
+
+  // Geometry in device pixels, relative to the canvas.
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const box = canvas.getBoundingClientRect();
+  canvas.width = Math.round(box.width * dpr);
+  canvas.height = Math.round(box.height * dpr);
+  const ctx = canvas.getContext("2d");
+  const D = (v) => Math.round(v * dpr);
+
+  const plans = slots.map((slot, i) => {
+    const r = slot.getBoundingClientRect();
+    const x = r.left - box.left, y = r.top - box.top, w = r.width, h = r.height;
+    const levels = [INTRO.cell, ...INTRO.sharpen].map((k) => mosaic(stills[i], k));
+    const coarse = levels[0];
+    const cols = coarse.width, rowsN = coarse.height;
+    const px = coarse.getContext("2d").getImageData(0, 0, cols, rowsN).data;
+    const bw = w / cols, bh = h / rowsN;
+    const start = INTRO.starts[i] || 0;
+    const blocks = [];
+    for (let row = 0; row < rowsN; row++) {
+      for (let col = 0; col < cols; col++) {
+        const o = (row * cols + col) * 4;
+        const fromBottom = (rowsN - 1 - row) / Math.max(1, rowsN - 1);
+        blocks.push({
+          x0: D(x + col * bw), x1: D(x + (col + 1) * bw),
+          y0: D(y + row * bh), y1: D(y + (row + 1) * bh),
+          color: `rgb(${px[o]},${px[o + 1]},${px[o + 2]})`,
+          delay: start + fromBottom * INTRO.rows + Math.random() * INTRO.jitter,
+          drop: INTRO.drop[0] + Math.floor(Math.random() * (INTRO.drop[1] - INTRO.drop[0] + 1)),
+        });
+      }
+    }
+    const landed = start + INTRO.rows + INTRO.jitter + INTRO.fall;
+    return { slot, img: slot.querySelector("img"), levels, blocks, bh: D(bh), rect: [D(x), D(y), D(x + w) - D(x), D(y + h) - D(y)], landed, live: false, fadeAt: 0 };
+  });
+
+  const easeOut = (p) => 1 - Math.pow(1 - p, 3);
+  const t0 = performance.now();
+  const frame = (now) => {
+    const t = now - t0;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    let busy = false;
+    for (const p of plans) {
+      const sharpenAt = t - p.landed;
+      if (sharpenAt < 0) {
+        busy = true;
+        // Each slot is a well: blocks enter from its top edge and stack inside it.
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(...p.rect);
+        ctx.clip();
+        for (const b of p.blocks) {
+          const q = (t - b.delay) / INTRO.fall;
+          if (q <= 0) continue;
+          // Stepped motion: the block moves down whole block heights and fades in three steps.
+          const lift = q >= 1 ? 0 : Math.round(b.drop * (1 - easeOut(q))) * p.bh;
+          ctx.globalAlpha = Math.min(1, Math.ceil(q * 3) / 3);
+          ctx.fillStyle = b.color;
+          ctx.fillRect(b.x0, b.y0 - lift, b.x1 - b.x0, b.y1 - b.y0);
+        }
+        ctx.restore();
+        continue;
+      }
+      // Sharpen through the mosaic levels, then hand over to the GIF once it has loaded.
+      const step = Math.min(p.levels.length - 1, 1 + Math.floor(sharpenAt / INTRO.stepMs));
+      const sharp = step === p.levels.length - 1 && sharpenAt >= INTRO.stepMs * (p.levels.length - 1);
+      if (sharp && !p.live && p.img.complete && p.img.naturalWidth) {
+        p.live = true;
+        p.fadeAt = t;
+        p.slot.classList.add("is-live");
+      }
+      const alpha = p.live ? 1 - (t - p.fadeAt) / INTRO.fade : 1;
+      if (alpha <= 0) continue;
+      busy = true;
+      ctx.globalAlpha = alpha;
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(p.levels[step], ...p.rect);
+      ctx.globalAlpha = 1;
+    }
+    if (busy) raf = requestAnimationFrame(frame);
+    else finish();
+  };
+  raf = requestAnimationFrame(frame);
+}
+
 function init() {
   document.documentElement.classList.add("js");
   for (const el of $$("[data-version]")) el.textContent = VERSION;
   loadStars();
   // compare.html shares this script for the star count only.
   if (!$("#setup")) return;
+  heroIntro();
 
   renderGallery();
   renderPicks();
