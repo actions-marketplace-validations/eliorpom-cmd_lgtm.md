@@ -164,7 +164,10 @@ h3 { font-size: 22px; line-height: 1.25; letter-spacing: -0.02em; }
 .pill-btn.wide { width: 100%; }
 
 /* Hero: one column, title, one line, the button and who uses it. */
-.hero { padding-top: var(--s-96); }
+.hero { padding-top: var(--s-128); padding-bottom: var(--s-32); display: flex; flex-direction: column; align-items: center; text-align: center; }
+.hero h1 { max-width: none; }
+.hero .lead { margin-left: auto; margin-right: auto; }
+.hero .actions { justify-content: center; }
 .eyebrow { display: inline-flex; align-items: center; gap: var(--s-12); font: 500 12px/1 var(--sans); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: var(--s-32); }
 .dot { width: 6px; height: 6px; background: var(--green); }
 .lead { margin-top: var(--s-24); font-size: 20px; line-height: 1.5; max-width: 30em; }

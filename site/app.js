@@ -482,7 +482,7 @@ function update() {
   else if (!t.ok) hint.textContent = project ? "Type the repository first." : "Type your login first.";
   else hint.textContent = "";
   hint.hidden = !hint.textContent;
-  $("#readme-link").href = `${repoUrl}/edit/HEAD/README.md`;
+  $("#readme-link").href = repoUrl;
   $("#actions-link").href = `${repoUrl}/actions`;
   const result = $("#result-link");
   result.href = project ? repoUrl : `https://github.com/${t.owner}`;
