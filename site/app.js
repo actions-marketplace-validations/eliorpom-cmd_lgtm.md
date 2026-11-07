@@ -341,7 +341,7 @@ const STEPS = [
   { key: "target", next: "Continue" },
   { key: "token", next: "I added the secret", time: "about 1 min", profileOnly: true },
   { key: "workflow", next: "I committed it", time: "about 1 min" },
-  { key: "readme", next: "Done" },
+  { key: "readme", next: "I pasted it" },
   { key: "check" },
 ];
 
