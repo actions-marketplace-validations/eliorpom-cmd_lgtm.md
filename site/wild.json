@@ -1,0 +1,10 @@
+[
+  {
+    "login": "eliorpom-cmd",
+    "image": "wild/eliorpom-cmd.webp",
+    "width": 1692,
+    "height": 1160,
+    "widgets": ["grass", "flame", "departures"],
+    "captured": "2026-11-07"
+  }
+]
