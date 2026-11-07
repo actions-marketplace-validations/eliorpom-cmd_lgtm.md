@@ -279,8 +279,9 @@ html.modal-open { overflow: hidden; }
 
 /* Step 6: done. */
 .pane-done { text-align: center; padding-top: var(--s-16); }
-.done-mark { width: 64px; height: 64px; margin: 0 auto var(--s-24); display: grid; place-items: center; border-radius: 50%; background: rgba(63, 185, 80, 0.12); color: var(--green); }
-.done-mark .icon { width: 32px; height: 32px; stroke-width: 2.5; }
+/* The brand mark in green: the README page is checked. 48 px keeps each grid pixel at 3 px. */
+.done-mark { width: 48px; height: 48px; margin: 0 auto var(--s-24); color: var(--green); }
+.done-mark .mark { width: 48px; height: 48px; }
 .pane-actions { display: grid; gap: var(--s-12); margin-top: var(--s-32); }
 .pane-done .more { text-align: left; }
 

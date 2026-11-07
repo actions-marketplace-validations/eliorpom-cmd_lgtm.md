@@ -589,13 +589,14 @@ function setMode(mode) {
   update();
 }
 
-// Profiles that run LGTM.md, from wild.json: one round avatar each.
+// Profiles that run LGTM.md, from wild.json: one round avatar each. The row shows from five profiles.
+const USED_MIN = 5;
 async function renderUsed() {
   try {
     const res = await fetch("wild.json", { cache: "no-cache" });
     if (!res.ok) return;
     const list = (await res.json()).filter((e) => e && LOGIN_RE.test(e.login || "")).slice(0, 24);
-    if (!list.length) return;
+    if (list.length < USED_MIN) return;
     $("#used-list").innerHTML = list.map((e) => `<li><a href="https://github.com/${e.login}" target="_blank" rel="noopener" title="${e.login}" aria-label="${e.login} on GitHub"><img src="https://github.com/${e.login}.png?size=64" alt="" width="32" height="32" loading="lazy"></a></li>`).join("");
     $("#used").hidden = false;
   } catch { /* the row stays hidden */ }
