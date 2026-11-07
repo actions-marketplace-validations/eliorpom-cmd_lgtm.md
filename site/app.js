@@ -6,6 +6,16 @@ const VERSION = "v1.2.0";
 const REPO_URL = "https://github.com/eliorpom-cmd/lgtm.md";
 
 // size: "wide" spans the whole row. width: the README width that keeps the GIF sharp but not huge.
+// Gallery filters, in tab order.
+const CATEGORIES = ["Streak", "Activity", "Languages", "Pull requests", "Compare"];
+const CATEGORY = {
+  flame: "Streak", records: "Streak",
+  grass: "Activity", counter: "Activity", departures: "Activity", forest: "Activity", ecg: "Activity", "cherry-tree": "Activity",
+  hourglass: "Languages", donut: "Languages",
+  fireworks: "Pull requests", "fireworks-commits": "Pull requests",
+  median: "Compare", duel: "Compare",
+};
+
 const WIDGETS = [
   { id: "grass", w: 1600, h: 744, size: "wide", width: "100%", project: true,
     desc: "The last 90 days, one tuft of grass per day. Flowers are your languages, fireflies your merged pull requests.",
@@ -170,20 +180,23 @@ function buildHtml(t) {
 }
 
 function renderGrid() {
-  const grid = $("#grid");
-  grid.innerHTML = WIDGETS.map((w) => {
+  $("#filters").innerHTML = ["All", ...CATEGORIES].map((c) =>
+    `<button class="filter" type="button" data-filter="${c}" aria-pressed="${c === "All"}">${c}</button>`
+  ).join("");
+  $("#grid").innerHTML = WIDGETS.map((w) => {
     const file = w.file || w.id;
     const label = w.id === "duel" ? "duel-&lt;login&gt;" : w.id;
-    return `<li class="card${w.size === "wide" ? " wide" : ""}" data-id="${w.id}">
-      <div class="card-media" style="--ratio:${w.w} / ${w.h}">
+    return `<li class="card" data-id="${w.id}" data-cat="${CATEGORY[w.id]}">
+      <div class="card-media">
         <img src="widgets/${file}.gif" alt="${esc(w.alt)}" width="${w.w}" height="${w.h}" loading="lazy" decoding="async">
       </div>
       <div class="card-body">
-        <div>
-          <h3 class="card-name">${label}<span class="card-tag" hidden>Profile only</span></h3>
+        <div class="card-text">
+          <h3 class="card-name">${label}</h3>
           <p class="card-desc">${w.desc}</p>
+          <p class="card-tag" hidden>Profile only</p>
         </div>
-        <button class="toggle" type="button" data-id="${w.id}" aria-pressed="false" aria-label="Add ${w.id}"></button>
+        <button class="toggle pill-btn small ghost" type="button" data-id="${w.id}" aria-pressed="false" aria-label="Add ${w.id}">Add</button>
       </div>
     </li>`;
   }).join("");
@@ -220,7 +233,8 @@ function update() {
     const toggle = card.querySelector(".toggle");
     toggle.disabled = !ok;
     toggle.setAttribute("aria-pressed", String(on));
-    toggle.textContent = on ? "Added" : "Add";
+    toggle.textContent = on ? "Added ✓" : "Add";
+    card.classList.toggle("is-picked", on);
     const chip = document.querySelector(`.chip[data-id="${w.id}"]`);
     chip.disabled = !ok;
     chip.setAttribute("aria-pressed", String(on));
@@ -228,6 +242,7 @@ function update() {
   const count = activeWidgets().length;
   $("#bar-count").textContent = `${count} widget${count === 1 ? "" : "s"} selected`;
   $("#bar").hidden = count === 0 || state.setupVisible;
+  $("#bar-thumbs").innerHTML = activeWidgets().slice(0, 6).map((w) => `<img src="widgets/${w.file || w.id}.gif" alt="">`).join("");
   $("#rival-field").hidden = !(state.picked.has("duel") && !project);
   $("#pick-all").textContent = WIDGETS.filter(allowed).every((w) => state.picked.has(w.id)) ? "Clear" : "Select all";
 
@@ -235,8 +250,8 @@ function update() {
   const yaml = buildYaml();
   const html = buildHtml(t);
   const names = activeWidgets().map(actionName).filter(Boolean);
-  $("#yaml").textContent = yaml;
-  $("#html").textContent = html || "<!-- Pick at least one widget above. -->";
+  renderCode($("#yaml"), yaml);
+  renderCode($("#html"), html || "<!-- Pick a widget: its image line appears here. -->");
   const repo = `${t.owner}/${t.repo}`;
   $("#step1-help").textContent = project
     ? `Commit this file to ${repo}. The GIFs appear on its lgtm-md branch a minute later, then redraw every night. No token needed.`
@@ -261,6 +276,15 @@ function update() {
 
   // Private activity needs a token only for a profile: a project's own token already reads it.
   $("#private").hidden = project;
+}
+
+// One span per line, so CSS can number them. Lines that were not there before get a short highlight.
+function renderCode(el, text) {
+  const before = new Set((el.dataset.raw || "").split("\n"));
+  const first = !el.dataset.raw;
+  el.dataset.raw = text;
+  el.innerHTML = text.replace(/\n$/, "").split("\n")
+    .map((line) => `<span class="ln${!first && !before.has(line) ? " is-new" : ""}">${esc(line) || " "}</span>`).join("");
 }
 
 function toast(text) {
@@ -292,10 +316,6 @@ async function copy(text) {
 function toggleWidget(id) {
   if (state.picked.has(id)) state.picked.delete(id);
   else state.picked.add(id);
-  // The selection bar hides once the setup is on screen.
-  if ("IntersectionObserver" in window) {
-    new IntersectionObserver(([en]) => { state.setupVisible = en.isIntersecting; update(); }, { rootMargin: "0px 0px -40% 0px" }).observe($("#setup"));
-  }
 
   update();
 }
@@ -316,8 +336,22 @@ function init() {
       $("#target").value = "";
       return update();
     }
+    const tab = e.target.closest(".gh-tab");
+    if (tab) {
+      for (const t of document.querySelectorAll(".gh-tab")) t.setAttribute("aria-selected", String(t === tab));
+      for (const id of ["html", "yaml"]) $("#" + id).hidden = id !== tab.dataset.file;
+      $(".gh .copy").dataset.copy = tab.dataset.file;
+      return;
+    }
+    const filter = e.target.closest(".filter");
+    if (filter) {
+      for (const f of document.querySelectorAll(".filter")) f.setAttribute("aria-pressed", String(f === filter));
+      const c = filter.dataset.filter;
+      for (const card of document.querySelectorAll(".card")) card.hidden = c !== "All" && card.dataset.cat !== c;
+      return;
+    }
     const copyBtn = e.target.closest(".copy");
-    if (copyBtn) return copy($("#" + copyBtn.dataset.copy).textContent);
+    if (copyBtn) return copy($("#" + copyBtn.dataset.copy).dataset.raw);
     if (e.target.closest("#pick-all")) {
       const all = WIDGETS.filter(allowed);
       const full = all.every((w) => state.picked.has(w.id));
@@ -335,6 +369,17 @@ function init() {
     update();
     $(`#mode-${state.mode}`).focus();
   });
+
+  if ("IntersectionObserver" in window) {
+    // The selection bar hides once the setup is on screen.
+    new IntersectionObserver(([en]) => { state.setupVisible = en.isIntersecting; update(); }, { rootMargin: "0px 0px -40% 0px" }).observe($("#setup"));
+    // The step in the middle of the screen is the active one.
+    const steps = [...document.querySelectorAll(".step")];
+    const io = new IntersectionObserver((entries) => {
+      for (const en of entries) if (en.isIntersecting) for (const st of steps) st.classList.toggle("is-active", st === en.target);
+    }, { rootMargin: "-45% 0px -45% 0px" });
+    for (const st of steps) io.observe(st);
+  }
 
   update();
 }

@@ -12,60 +12,88 @@
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Silkscreen&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Funnel+Display:wght@300..700&family=Funnel+Sans:wght@400..600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<main class="col">
 
-  <header class="intro">
-    <p class="name">LGTM.md</p>
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="logo" href="#top">LGTM.md</a>
+    <nav>
+      <a href="#widgets">Widgets</a>
+      <a href="#setup">Setup</a>
+      <a class="pill-btn small ghost" href="https://github.com/eliorpom-cmd/lgtm.md">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero wrap">
+    <div class="hero-text">
+    <p class="eyebrow"><span class="dot"></span>GitHub Action · <span data-version>v1.2.0</span></p>
     <h1>Looks good to ReadMe.</h1>
-    <p>Pixel-art GIFs of your GitHub activity for your README, redrawn every night by a GitHub Action.</p>
-    <ol class="flow">
-      <li>Pick widgets</li>
-      <li>Create a token</li>
-      <li>Commit the workflow</li>
-      <li>Paste the images in your README</li>
-    </ol>
-    <p class="meta"><a href="https://github.com/eliorpom-cmd/lgtm.md">Source</a> · <a href="https://github.com/marketplace/actions/lgtm-md">Marketplace</a> · <span data-version>v1.2.0</span> · MIT</p>
-  </header>
+    <p class="lead">Pixel-art GIFs of your GitHub activity for your README, redrawn every night.</p>
+    <div class="actions">
+      <a class="pill-btn" href="#widgets">Pick your widgets</a>
+      <a class="text-link" href="https://github.com/marketplace/actions/lgtm-md">GitHub Marketplace ↗</a>
+    </div>
+    </div>
+    <div class="stage">
+      <div class="window" aria-hidden="true">
+        <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span>octocat / README.md</span></div>
+        <div class="window-body">
+          <img src="widgets/grass.gif" alt="" width="1600" height="744" fetchpriority="high">
+          <div class="window-row">
+            <img src="widgets/flame.gif" alt="" width="832" height="552">
+            <img src="widgets/departures.gif" alt="" width="1600" height="424">
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 
-  <section id="widgets">
-    <h2>Widgets</h2>
-    <p class="sub">Examples from a made-up account. Click Add on the ones you want.</p>
+  <section class="wrap sec" id="widgets">
+    <p class="sec-label">01 / Widgets</p>
+    <div class="sec-head">
+      <h2>Choose your widgets</h2>
+      <p>Examples from a made-up account. Yours show your own activity.</p>
+    </div>
+    <div class="filters" id="filters" role="toolbar" aria-label="Filter widgets"></div>
     <ul class="grid" id="grid"></ul>
   </section>
 
-  <section id="setup">
-    <h2>Setup</h2>
+  <section class="wrap sec" id="setup">
+    <p class="sec-label">02 / Setup</p>
+    <div class="sec-head">
+      <h2>Add them to your README</h2>
+      <p>Four steps. The first run starts as soon as you commit the workflow.</p>
+    </div>
 
+    <div class="setup">
       <ol class="steps">
-        <li id="pick">
+        <li class="step" id="pick">
           <h3>Pick your widgets</h3>
-          <div class="mode" role="tablist" aria-label="Where the widgets go">
+          <div class="mode tabs" role="tablist" aria-label="Where the widgets go">
             <button role="tab" id="mode-profile" aria-selected="true" data-mode="profile">Profile</button>
             <button role="tab" id="mode-project" aria-selected="false" data-mode="project">Project</button>
           </div>
           <p class="mode-help" id="mode-help"></p>
-
           <label class="field">
             <span id="target-label">Your GitHub login</span>
             <input id="target" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="octocat">
           </label>
           <p class="field-error" id="target-error" hidden></p>
-
           <div class="picked">
             <div class="picked-head"><span>Widgets</span><button class="link" id="pick-all" type="button">Select all</button></div>
             <div class="chips" id="chips"></div>
-            <label class="field field-inline" id="rival-field" hidden>
+            <label class="field" id="rival-field" hidden>
               <span>Friend to duel</span>
               <input id="rival" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="torvalds">
             </label>
           </div>
-
         </li>
-        <li id="private">
+        <li class="step" id="private">
           <h3>Create a token</h3>
           <p>It lets the widgets count your private activity.</p>
           <ol class="token-steps">
@@ -76,38 +104,53 @@
           </ol>
           <p class="hint">The token can only read. Without it, the widgets show public activity only.</p>
         </li>
-        <li>
-          <h3>Add the workflow</h3>
+        <li class="step">
+          <h3>Commit the workflow</h3>
           <p id="step1-help"></p>
-          <a class="btn btn-primary" id="create" href="#" target="_blank" rel="noopener">Create the workflow on GitHub</a>
+          <a class="pill-btn" id="create" href="#" target="_blank" rel="noopener">Create the workflow on GitHub ↗</a>
           <p class="hint" id="create-hint"></p>
-          <details class="file">
-            <summary>Show the file</summary>
-          <div class="code">
-            <div class="code-bar"><span>.github/workflows/lgtm-md.yml</span><button class="copy" data-copy="yaml" type="button">Copy</button></div>
-            <pre><code id="yaml"></code></pre>
-          </div>
-          </details>
         </li>
-        <li>
-          <h3>Show them in your README</h3>
-          <p>Paste this where the widgets should go.</p>
-          <div class="code">
-            <div class="code-bar"><span>README.md</span><button class="copy" data-copy="html" type="button">Copy</button></div>
-            <pre><code id="html"></code></pre>
-          </div>
+        <li class="step">
+          <h3>Paste the images in your README</h3>
+          <p>Copy <b>README.md</b> from the panel and paste it where the widgets should go.</p>
         </li>
       </ol>
 
-      </section>
-
-  <footer class="foot">
-    <a href="https://github.com/eliorpom-cmd/lgtm.md">GitHub</a>
-    <a href="https://ko-fi.com/eliorpom">Ko-fi</a>
-  </footer>
-
+      <div class="code-col">
+        <div class="backdrop" aria-hidden="true"><img src="widgets/grass.gif" alt=""></div>
+        <div class="gh">
+          <div class="gh-bar">
+            <div class="gh-tabs" role="tablist" aria-label="Files">
+              <button class="gh-tab" role="tab" data-file="html" aria-selected="true">README.md</button>
+              <button class="gh-tab" role="tab" data-file="yaml" aria-selected="false">lgtm-md.yml</button>
+            </div>
+            <button class="copy pill-btn small ghost" data-copy="html" type="button">Copy</button>
+          </div>
+          <pre class="gh-code" id="html"></pre>
+          <pre class="gh-code" id="yaml" hidden></pre>
+        </div>
+      </div>
+    </div>
+  </section>
 </main>
-<div class="bar" id="bar" hidden><span id="bar-count"></span><a class="bar-go" href="#setup">Continue to setup</a></div>
+
+<footer class="foot">
+  <div class="wrap foot-in">
+    <span class="logo">LGTM.md</span>
+    <a href="https://github.com/eliorpom-cmd/lgtm.md">Source code</a>
+    <a href="https://github.com/marketplace/actions/lgtm-md">Marketplace</a>
+    <a href="https://ko-fi.com/eliorpom">Ko-fi</a>
+    <span>MIT License</span>
+  </div>
+</footer>
+
+<div class="bar" id="bar" hidden>
+  <div class="wrap bar-in">
+    <div class="bar-thumbs" id="bar-thumbs"></div>
+    <span id="bar-count"></span>
+    <a class="pill-btn" href="#setup">Continue to setup</a>
+  </div>
+</div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="app.js"></script>
 </body>
