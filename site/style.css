@@ -199,6 +199,8 @@ h3 { font-size: 22px; line-height: 1.25; letter-spacing: -0.02em; }
 .used-list { display: flex; list-style: none; margin: 0; padding: 0; }
 .used-list li + li { margin-left: -6px; }
 .used-list a { display: block; border-radius: 50%; }
+.used-out { margin-left: var(--s-4); font-size: 13px; color: var(--faint); text-decoration: underline; text-decoration-color: var(--line-2); text-underline-offset: 3px; }
+.used-out:hover { color: var(--text); }
 .used-list img { width: 32px; height: 32px; border-radius: 50%; background: var(--panel-2); box-shadow: 0 0 0 2px var(--bg); }
 
 .sec { margin-top: var(--s-96); padding-top: var(--s-48); border-top: 1px solid var(--line); }

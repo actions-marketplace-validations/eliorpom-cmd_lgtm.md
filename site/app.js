@@ -595,7 +595,8 @@ function setMode(mode) {
   update();
 }
 
-// Profiles that run LGTM.md, from wild.json: one round avatar each. The row shows from five profiles.
+// Profiles that run LGTM.md, from wild.json (updated weekly by .github/workflows/used-by.yml):
+// one round avatar each. The row shows from five profiles.
 const USED_MIN = 5;
 async function renderUsed() {
   try {
@@ -603,7 +604,9 @@ async function renderUsed() {
     if (!res.ok) return;
     const list = (await res.json()).filter((e) => e && LOGIN_RE.test(e.login || "")).slice(0, 24);
     if (list.length < USED_MIN) return;
-    $("#used-list").innerHTML = list.map((e) => `<li><a href="https://github.com/${e.login}" target="_blank" rel="noopener" title="${e.login}" aria-label="${e.login} on GitHub"><img src="https://github.com/${e.login}.png?size=64" alt="" width="32" height="32" loading="lazy"></a></li>`).join("");
+    // Avatars come from the GitHub API (scripts/used-by.mjs); older entries fall back to github.com/<login>.png.
+    const avatar = (e) => /^https:\/\/avatars\.githubusercontent\.com\//.test(e.avatar || "") ? `${e.avatar}${e.avatar.includes("?") ? "&" : "?"}s=64` : `https://github.com/${e.login}.png?size=64`;
+    $("#used-list").innerHTML = list.map((e) => `<li><a href="https://github.com/${e.login}" target="_blank" rel="noopener" title="${e.login}" aria-label="${e.login} on GitHub"><img src="${esc(avatar(e))}" alt="" width="32" height="32" loading="lazy"></a></li>`).join("");
     $("#used").hidden = false;
   } catch { /* the row stays hidden */ }
 }
