@@ -262,18 +262,10 @@ html.modal-open { overflow: hidden; }
 /* Step 1: mode switch, then the selectable thumbnails. */
 .pane-tools { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-12) var(--s-16); margin: var(--s-24) 0 var(--s-16); }
 .picked-count { margin-left: auto; font-size: 14px; color: var(--muted); }
-.picks { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-12); }
+.picks { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-12); }
 /* Step 1: thumbnails on the left, the README they go into on the right. */
-.pick-layout { display: grid; grid-template-columns: minmax(0, 1fr) 200px; gap: var(--s-16); align-items: start; }
-.mini { position: sticky; top: 0; max-height: 400px; display: flex; flex-direction: column; }
-.mini-head { flex: none; padding: var(--s-8) var(--s-12); border-bottom: 1px solid var(--gh-line); font: 600 12px/1.4 var(--sans); color: var(--gh-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.mini-body { padding: var(--s-8); font-size: 0; line-height: 0; overflow: hidden; -webkit-mask-image: linear-gradient(#000 85%, transparent); mask-image: linear-gradient(#000 85%, transparent); }
-.mini-body:empty { display: none; }
-.mini-body img { display: inline-block; height: auto; vertical-align: top; margin: 0 1% 4px 0; max-width: 100%; transition: opacity 160ms ease; }
-.mini-body img.is-landing { opacity: 0; transition: none; }
-.mini-empty { padding: var(--s-24) var(--s-12); font-size: 13px; line-height: 1.4; color: var(--gh-faint); text-align: center; }
+.pick-layout { display: block; }
 .cfg-in { position: relative; overflow: clip; }
-.fly-fx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
 .pick { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: stretch; gap: var(--s-8); padding: var(--s-8) var(--s-8) var(--s-12); border: 1px solid var(--line-2); border-radius: var(--s-12); background: var(--panel-2); color: var(--text); text-align: left; font: 500 14px/1.3 var(--sans); cursor: pointer; transition: border-color 180ms ease, background-color 180ms ease; }
 .pick:hover { border-color: var(--faint); }
 .pick-media { position: relative; display: block; aspect-ratio: 2 / 1; border-radius: var(--s-8); background: var(--gh-bg); overflow: hidden; }
@@ -439,12 +431,6 @@ html.modal-open { overflow: hidden; }
   .picks { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-8); }
   /* On phones the README sits above the thumbnails as one row. */
   .pick-layout { grid-template-columns: minmax(0, 1fr); gap: var(--s-12); }
-  .mini { order: -1; position: static; max-height: none; flex-direction: row; align-items: center; }
-  .mini-head { flex: none; border-bottom: 0; border-right: 1px solid var(--gh-line); }
-  .mini-owner { display: none; }
-  .mini-body { display: flex; gap: 4px; flex: 1; min-width: 0; height: 52px; padding: 6px; -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); }
-  .mini-body img { width: auto !important; height: 40px; max-width: none; margin: 0; }
-  .mini-empty { padding: var(--s-12); text-align: left; }
   .picked-count { margin-left: 0; }
   /* Narrower numbers and a two-column hang leave room for a whole URL on one line. */
   .ln { grid-template-columns: 16px minmax(0, 1fr); column-gap: var(--s-8); padding-right: var(--s-8); }

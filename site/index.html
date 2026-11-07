@@ -155,11 +155,6 @@
         </div>
         <div class="pick-layout">
           <ul class="picks" id="picks"></ul>
-          <aside class="mini gh" aria-label="Your README with the picked widgets">
-            <p class="mini-head" id="mini-path">your-login / README.md</p>
-            <div class="mini-body" id="mini-body"></div>
-            <p class="mini-empty" id="mini-empty">Picked widgets show here.</p>
-          </aside>
         </div>
       </section>
 
@@ -270,6 +265,10 @@
           <p class="run-status" role="status"><span class="run-dot" aria-hidden="true"></span><span id="run-text">Waiting for the first run</span></p>
           <p class="run-detail" id="run-detail"></p>
         </div>
+        <div class="pane-actions">
+          <a class="pill-btn wide" id="result-link" href="#" target="_blank" rel="noopener">Open your GitHub profile ↗</a>
+          <a class="pill-btn ghost wide" id="actions-link" href="#" target="_blank" rel="noopener">Check the Actions run ↗</a>
+        </div>
         <div class="gh run-readme gh-theme" id="run-readme" data-theme="dark" hidden>
           <div class="md-head">
             <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
@@ -280,10 +279,6 @@
             </div>
           </div>
           <div class="md-body" id="run-body"></div>
-        </div>
-        <div class="pane-actions">
-          <a class="pill-btn wide" id="result-link" href="#" target="_blank" rel="noopener">Open your GitHub profile ↗</a>
-          <a class="pill-btn ghost wide" id="actions-link" href="#" target="_blank" rel="noopener">Check the Actions run ↗</a>
         </div>
         <details class="more">
           <summary>If an image stays broken</summary>
@@ -307,8 +302,6 @@
         </div>
       </section>
     </div>
-
-    <canvas class="fly-fx" id="fly-fx" aria-hidden="true"></canvas>
     <footer class="cfg-foot">
       <button class="pill-btn wide" type="button" id="next" aria-describedby="cfg-reason">Continue</button>
       <p class="cfg-reason" id="cfg-reason" aria-live="polite"></p>
