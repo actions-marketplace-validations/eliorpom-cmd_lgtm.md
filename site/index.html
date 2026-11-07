@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LGTM.md · Pixel-art widgets for your GitHub README</title>
+<meta name="description" content="A GitHub Action that draws animated pixel-art widgets for your profile or project README, every night, from your real activity.">
+<meta property="og:title" content="LGTM.md · Looks good to ReadMe.">
+<meta property="og:description" content="Animated pixel-art widgets for your GitHub README, redrawn every night from your real activity.">
+<meta property="og:image" content="https://lgtm.byelior.dev/widgets/grass.gif">
+<meta name="theme-color" content="#0d1117">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="col">
+
+  <header class="intro">
+    <p class="name">LGTM.md</p>
+    <h1>Looks good to ReadMe.</h1>
+    <p>Pixel-art GIFs of your GitHub activity for your README, redrawn every night by a GitHub Action.</p>
+    <p class="meta"><a href="https://github.com/eliorpom-cmd/lgtm.md">Source</a> · <a href="https://github.com/marketplace/actions/lgtm-md">Marketplace</a> · <span data-version>v1.2.0</span> · MIT</p>
+  </header>
+
+  <section id="widgets">
+    <h2>Widgets</h2>
+    <p class="sub">Examples from a made-up account. Add the ones you want to the setup.</p>
+    <ul class="grid" id="grid"></ul>
+  </section>
+
+  <section id="setup">
+    <h2>Setup</h2>
+
+      <div class="mode" role="tablist" aria-label="Where the widgets go">
+        <button role="tab" id="mode-profile" aria-selected="true" data-mode="profile">Profile</button>
+        <button role="tab" id="mode-project" aria-selected="false" data-mode="project">Project</button>
+      </div>
+      <p class="mode-help" id="mode-help"></p>
+
+      <label class="field">
+        <span id="target-label">Your GitHub login</span>
+        <input id="target" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="octocat">
+      </label>
+      <p class="field-error" id="target-error" hidden></p>
+
+      <div class="picked">
+        <div class="picked-head"><span>Widgets</span><button class="link" id="pick-all" type="button">Select all</button></div>
+        <div class="chips" id="chips"></div>
+        <label class="field field-inline" id="rival-field" hidden>
+          <span>Friend to duel</span>
+          <input id="rival" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="torvalds">
+        </label>
+      </div>
+
+      <ol class="steps">
+        <li id="private">
+          <h3>Create a token</h3>
+          <p>It lets the widgets count your private activity.</p>
+          <ol class="token-steps">
+            <li>Open the <a id="token-link" href="https://github.com/settings/personal-access-tokens/new?name=LGTM.md&amp;description=Read-only+token+for+LGTM.md&amp;expires_in=none&amp;contents=read&amp;pull_requests=read" target="_blank" rel="noopener">pre-filled token form</a>: read-only, no expiration.</li>
+            <li>Under <b>Repository access</b>, choose <b>All repositories</b>.</li>
+            <li>Click <b>Generate token</b> and copy it.</li>
+            <li>In your profile repository, open <b>Settings → Secrets and variables → Actions</b> and add a secret named <code>LGTM_MD_TOKEN</code>.</li>
+          </ol>
+          <p class="hint">The token can only read. Without it, the widgets show public activity only.</p>
+        </li>
+        <li>
+          <h3>Add the workflow</h3>
+          <p id="step1-help"></p>
+          <a class="btn btn-primary" id="create" href="#" target="_blank" rel="noopener">Create the workflow on GitHub</a>
+          <p class="hint" id="create-hint"></p>
+          <details class="file">
+            <summary>Show the file</summary>
+          <div class="code">
+            <div class="code-bar"><span>.github/workflows/lgtm-md.yml</span><button class="copy" data-copy="yaml" type="button">Copy</button></div>
+            <pre><code id="yaml"></code></pre>
+          </div>
+          </details>
+        </li>
+        <li>
+          <h3>Show them in your README</h3>
+          <p>Paste this where the widgets should go.</p>
+          <div class="code">
+            <div class="code-bar"><span>README.md</span><button class="copy" data-copy="html" type="button">Copy</button></div>
+            <pre><code id="html"></code></pre>
+          </div>
+        </li>
+      </ol>
+
+      </section>
+
+  <footer class="foot">
+    <a href="https://github.com/eliorpom-cmd/lgtm.md">GitHub</a>
+    <a href="https://ko-fi.com/eliorpom">Ko-fi</a>
+  </footer>
+
+</main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="app.js"></script>
+</body>
+</html>
