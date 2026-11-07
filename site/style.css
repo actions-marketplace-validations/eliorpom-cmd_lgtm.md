@@ -78,15 +78,22 @@ h3 { font-size: 22px; line-height: 1.25; letter-spacing: -0.02em; }
 .filter[aria-pressed="true"] { background: var(--text); border-color: var(--text); color: var(--bg); }
 
 .grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-24); }
-.card { display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line); border-radius: var(--s-16); overflow: hidden; box-shadow: var(--depth); transition: border-color 180ms ease; }
-.card:hover { border-color: var(--line-2); }
-.card-media { position: relative; aspect-ratio: 2 / 1; margin: var(--s-8); border-radius: var(--s-8); background: var(--gh-bg); }
-/* Most widgets are about 2:1, so they fill the thumbnail; the others sit centred in it. */
-.card-media img { position: absolute; inset: var(--s-12); width: calc(100% - 24px); height: calc(100% - 24px); object-fit: contain; }
-.card-body { display: flex; align-items: flex-start; gap: var(--s-16); padding: var(--s-8) var(--s-16) var(--s-24); flex: 1; }
-.card-name { font-size: 20px; letter-spacing: -0.02em; }
+/* Card: the GIF full-bleed on GitHub's page colour (the GIFs' own background), so it blends in. */
+.card { display: flex; flex-direction: column; background: var(--panel); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; overflow: hidden; transition: border-color 180ms ease, transform 180ms ease; }
+.card:hover { border-color: rgba(255, 255, 255, 0.16); transform: translateY(-2px); }
+.card-media { position: relative; aspect-ratio: 2 / 1; background: var(--gh-bg); border-bottom: 1px solid rgba(255, 255, 255, 0.06); overflow: hidden; }
+/* Every widget is contained and centred in the same 2:1 area; narrow ones get side margins of the same colour. */
+.card-media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; transition: opacity 220ms ease; }
+.card-media.is-padded img { inset: 6% 4%; width: 92%; height: 88%; }
+.card-fx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.card.is-assembling .card-media img { opacity: 0; }
+.card-body { display: flex; flex-direction: column; flex: 1; padding: var(--s-16) var(--s-16) var(--s-16); }
+.card-name { font: 500 18px/1.25 var(--display); letter-spacing: -0.015em; }
 .card-id { margin-top: var(--s-4); font: 400 12px/1.4 var(--mono); color: var(--faint); }
-.card-desc { margin-top: var(--s-12); font-size: 15px; line-height: 1.5; max-width: 42ch; }
+.card-desc { margin-top: var(--s-8); font-size: 14px; line-height: 1.5; color: var(--muted); }
+.card-tags { display: flex; flex-wrap: wrap; gap: var(--s-8); margin-top: auto; padding-top: var(--s-16); }
+.tag { display: inline-flex; align-items: center; height: 24px; padding: 0 var(--s-8); border: 1px solid var(--line-2); border-radius: 999px; font: 500 12px/1 var(--sans); color: var(--muted); }
+.tag.quiet { border-color: transparent; background: rgba(255, 255, 255, 0.05); color: var(--faint); }
 /* Mode switch: two pills in a pill track, used above the gallery and in the setup. */
 .seg { display: inline-flex; padding: var(--s-4); gap: var(--s-4); border: 1px solid var(--line-2); border-radius: 999px; }
 .seg button { height: 32px; padding: 0 var(--s-16); border: 0; border-radius: 999px; background: transparent; color: var(--muted); font: 500 14px/1 var(--sans); cursor: pointer; transition: color 180ms ease, background-color 180ms ease; }
@@ -207,27 +214,34 @@ h3 { font-size: 22px; line-height: 1.25; letter-spacing: -0.02em; }
 .sec-head { margin-bottom: var(--s-32); max-width: 680px; }
 .sec-head p { margin-top: var(--s-16); font-size: 20px; line-height: 1.5; }
 .filters { margin-bottom: var(--s-32); }
-.card-body { display: block; padding: var(--s-8) var(--s-16) var(--s-24); }
-.card-tag { font-family: var(--sans); font-size: 13px; color: var(--muted); }
 
 /* Setup dialog: one question per screen in a centred column, wider only for the widget grid. */
 html.modal-open { overflow: hidden; }
-.cfg { width: min(560px, calc(100% - 48px)); max-width: none; height: fit-content; max-height: calc(100dvh - 64px); padding: 0; border: 1px solid var(--line-2); border-radius: 20px; background: var(--panel); color: var(--muted); box-shadow: var(--depth), 0 40px 120px -24px rgba(0, 0, 0, 0.8); overflow: hidden; }
-.cfg.is-wide { width: min(880px, calc(100% - 48px)); }
+/* One fixed frame for every step: header and footer stay put, only the middle scrolls. */
+.cfg { width: min(720px, calc(100% - 48px)); max-width: none; height: min(640px, calc(100dvh - 64px)); max-height: none; padding: 0; border: 1px solid var(--line-2); border-radius: 20px; background: var(--panel); color: var(--muted); box-shadow: var(--depth), 0 40px 120px -24px rgba(0, 0, 0, 0.8); overflow: hidden; }
 .cfg:focus, .cfg:focus-visible { outline: none; }
 .cfg[open] { display: flex; animation: cfg-in 240ms var(--ease); }
 .cfg::backdrop { background: rgba(4, 5, 7, 0.62); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
 @keyframes cfg-in { from { opacity: 0; transform: translateY(8px) scale(0.99); } to { opacity: 1; transform: none; } }
-.cfg-in { display: flex; flex-direction: column; width: 100%; min-height: 0; }
+.cfg-in { display: flex; flex-direction: column; width: 100%; height: 100%; min-height: 0; }
 .cfg-head { flex: none; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: var(--s-12) var(--s-16); padding: var(--s-24) var(--s-24) 0 var(--s-32); }
 .cfg-count { font: 500 14px/1 var(--sans); color: var(--text); }
 .cfg-time { color: var(--faint); font-weight: 400; }
 .close { width: 32px; height: 32px; display: grid; place-items: center; border: 1px solid var(--line-2); border-radius: 999px; background: transparent; color: var(--muted); cursor: pointer; transition: color 180ms ease, border-color 180ms ease; }
 .close:hover { color: var(--text); border-color: var(--faint); }
 .cfg-bar { grid-column: 1 / -1; display: flex; gap: var(--s-4); list-style: none; margin: 0; padding: 0 var(--s-8) 0 0; }
-.cfg-bar li { flex: 1; height: 4px; border-radius: 999px; background: var(--line-2); transition: background-color 240ms ease; }
-.cfg-bar li.on { background: var(--text); }
-.cfg-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: var(--s-32) var(--s-32) var(--s-24); }
+.cfg-bar li { position: relative; flex: 1; height: 4px; background: var(--line-2); overflow: hidden; }
+.cfg-bar li:first-child { border-radius: 2px 0 0 2px; }
+.cfg-bar li:last-child { border-radius: 0 2px 2px 0; }
+/* A segment fills in four pixel steps, like a loading bar on an old console. */
+.cfg-bar li::after { content: ""; position: absolute; inset: 0; background: var(--text); transform: scaleX(0); transform-origin: left; transition: transform 200ms steps(4, end); }
+.cfg-bar li.on::after { transform: none; }
+.cfg-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: var(--s-32) var(--s-32) var(--s-24); scrollbar-width: thin; }
+/* Only the content moves between steps, never the frame. */
+.pane.is-entering { animation: pane-in 200ms var(--ease) both; }
+.pane.is-entering.from-left { animation-name: pane-in-back; }
+@keyframes pane-in { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
+@keyframes pane-in-back { from { opacity: 0; transform: translateX(-16px); } to { opacity: 1; transform: none; } }
 .pane-title { font-size: 28px; line-height: 1.15; letter-spacing: -0.025em; outline: none; }
 .pane-help { margin-top: var(--s-8); font-size: 16px; line-height: 1.5; }
 .pane-help + .pill-btn, .pane-help + .field { margin-top: var(--s-24); }
@@ -241,11 +255,11 @@ html.modal-open { overflow: hidden; }
 /* Step 1: mode switch, then the selectable thumbnails. */
 .pane-tools { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-12) var(--s-16); margin: var(--s-24) 0 var(--s-16); }
 .picked-count { margin-left: auto; font-size: 14px; color: var(--muted); }
-.picks { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s-12); }
+.picks { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-12); }
 .pick { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: stretch; gap: var(--s-8); padding: var(--s-8) var(--s-8) var(--s-12); border: 1px solid var(--line-2); border-radius: var(--s-12); background: var(--panel-2); color: var(--text); text-align: left; font: 500 14px/1.3 var(--sans); cursor: pointer; transition: border-color 180ms ease, background-color 180ms ease; }
 .pick:hover { border-color: var(--faint); }
-.pick-media { position: relative; display: block; aspect-ratio: 16 / 10; border-radius: var(--s-8); background: var(--gh-bg); }
-.pick-media img { position: absolute; inset: var(--s-8); width: calc(100% - 16px); height: calc(100% - 16px); object-fit: contain; }
+.pick-media { position: relative; display: block; aspect-ratio: 2 / 1; border-radius: var(--s-8); background: var(--gh-bg); overflow: hidden; }
+.pick-media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
 .pick-name { padding: 0 var(--s-4); }
 .pick-note { padding: 0 var(--s-4); font-size: 12px; font-weight: 400; color: var(--faint); }
 .pick-note:empty { display: none; }
@@ -282,12 +296,33 @@ html.modal-open { overflow: hidden; }
 .md-head { height: 40px; }
 
 /* Step 6: done. */
-.pane-done { text-align: center; padding-top: var(--s-16); }
+.pane-done { text-align: center; }
+.pane-done > .pane-help { max-width: 52ch; margin-left: auto; margin-right: auto; text-wrap: balance; }
 /* The brand mark in green: the README page is checked. 48 px keeps each grid pixel at 3 px. */
-.done-mark { width: 48px; height: 48px; margin: 0 auto var(--s-24); color: var(--green); }
+.done-mark { width: 48px; height: 48px; margin: 0 auto var(--s-16); color: var(--green); }
 .done-mark .mark { width: 48px; height: 48px; }
-.pane-actions { display: grid; gap: var(--s-12); margin-top: var(--s-32); }
-.pane-done .more { text-align: left; }
+.pane-actions { display: grid; gap: var(--s-12); max-width: 400px; margin: var(--s-24) auto 0; }
+.pane-done .more { text-align: left; max-width: 400px; margin: var(--s-12) auto 0; }
+/* Support: separated and quiet, after everything the visitor came for. */
+.support { display: grid; justify-items: center; gap: var(--s-12); margin-top: var(--s-24); padding-top: var(--s-24); border-top: 1px solid var(--line); }
+.support-note { display: flex; align-items: center; justify-content: center; gap: var(--s-8); }
+.support p { font-size: 14px; line-height: 1.5; color: var(--faint); text-align: left; }
+.support-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--s-8) var(--s-24); }
+.support .text-link { font-size: 14px; color: var(--muted); }
+.heart { width: 18px; height: 16px; flex: none; color: #db61a2; }
+
+/* Pixel marks that build themselves: each grid pixel drops in, bottom rows first. */
+.mark.is-building rect { animation: px-in 240ms steps(3, end) both; animation-delay: var(--d); }
+@keyframes px-in { from { opacity: 0; transform: translateY(-4px); } }
+
+/* Closing band after the gallery. */
+.closing { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--s-48); margin-top: var(--s-96); padding: var(--s-64); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px; background: var(--panel); overflow: hidden; isolation: isolate; }
+.closing::before { content: ""; position: absolute; inset: 0; z-index: -1; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Crect width='2' height='2' fill='%23fff' fill-opacity='.08'/%3E%3C/svg%3E"); -webkit-mask-image: radial-gradient(60% 90% at 85% 50%, #000 20%, transparent); mask-image: radial-gradient(60% 90% at 85% 50%, #000 20%, transparent); }
+.closing h2 { font-size: clamp(32px, 3.4vw, 44px); }
+.closing p { margin-top: var(--s-12); font-size: 18px; line-height: 1.5; max-width: 34em; }
+.closing .pill-btn { margin-top: var(--s-32); }
+.closing-mark { width: 128px; height: 128px; color: var(--text); margin-right: var(--s-32); }
+.closing-mark .mark { width: 128px; height: 128px; }
 
 /* Compare page */
 .page-head { padding-top: var(--s-96); margin-bottom: var(--s-48); max-width: 760px; }
@@ -328,7 +363,7 @@ html.modal-open { overflow: hidden; }
   .card { flex: 0 0 84vw; scroll-snap-align: start; }
   .filters { margin-right: calc(-1 * var(--gut)); padding-right: var(--gut); -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); }
   /* The dialog takes the whole screen; the footer stays at the bottom. */
-  .cfg, .cfg.is-wide { width: 100%; height: 100dvh; max-height: 100dvh; margin: 0; border: 0; border-radius: 0; }
+  .cfg { width: 100%; height: 100dvh; max-height: 100dvh; margin: 0; border: 0; border-radius: 0; }
   .cfg-head { padding: var(--s-16) var(--s-16) 0 var(--s-16); }
   .cfg-body { padding: var(--s-24) var(--s-16); }
   .cfg-foot { padding: var(--s-12) var(--s-16) max(var(--s-16), env(safe-area-inset-bottom)); }
@@ -341,6 +376,11 @@ html.modal-open { overflow: hidden; }
   .gh-code { font-size: 12px; }
   .strip-row img { height: 72px; }
   .facts { grid-template-columns: minmax(0, 1fr); gap: 0; margin-top: var(--s-64); }
+  .closing { grid-template-columns: minmax(0, 1fr); gap: var(--s-32); margin-top: var(--s-64); padding: var(--s-32) var(--s-24); }
+  .closing-mark { order: -1; width: 64px; height: 64px; margin: 0; }
+  .closing-mark .mark { width: 64px; height: 64px; }
+  .closing::before { -webkit-mask-image: radial-gradient(80% 50% at 20% 10%, #000 20%, transparent); mask-image: radial-gradient(80% 50% at 20% 10%, #000 20%, transparent); }
+  .closing .pill-btn { width: 100%; }
   .fact { padding: var(--s-24) 0; }
   .page-head { padding-top: var(--s-48); }
 }

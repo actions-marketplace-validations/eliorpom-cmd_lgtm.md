@@ -378,14 +378,17 @@ function renderGallery() {
   ).join("");
   $("#grid").innerHTML = WIDGETS.map((w) => {
     const id = w.id === "duel" ? "duel-&lt;login&gt;" : w.id;
-    return `<li class="card" data-cat="${CATEGORY[w.id]}">
-      <div class="card-media">
+    // Widgets far from 2:1 get a margin of the same colour, so none touches two edges and not the others.
+    const padded = Math.abs(w.w / w.h / 2 - 1) > 0.12;
+    return `<li class="card" data-cat="${CATEGORY[w.id]}" data-id="${w.id}">
+      <div class="card-media${padded ? " is-padded" : ""}">
         <img src="widgets/${w.file || w.id}.gif" alt="${esc(w.alt)}" width="${w.w}" height="${w.h}" loading="lazy" decoding="async">
       </div>
       <div class="card-body">
         <h3 class="card-name">${esc(w.name)}</h3>
-        <p class="card-id">${id}${w.project ? "" : ` <span class="card-tag">· Profile only</span>`}</p>
+        <p class="card-id">${id}</p>
         <p class="card-desc">${esc(w.desc)}</p>
+        <p class="card-tags"><span class="tag">${CATEGORY[w.id]}</span>${w.project ? "" : '<span class="tag quiet">Profile only</span>'}</p>
       </div>
     </li>`;
   }).join("");
@@ -492,14 +495,15 @@ function update() {
   $("#actions-link").href = `${repoUrl}/actions`;
   const result = $("#result-link");
   result.href = project ? repoUrl : `https://github.com/${t.owner}`;
-  result.textContent = project ? "Open your repository ↗" : "Open your profile ↗";
+  result.textContent = project ? "Open your repository ↗" : "Open your GitHub profile ↗";
   $("#tip-secret").hidden = project;
 
   // Shell: header, progress bar, the current pane, the footer.
-  const dialog = $("#setup");
-  dialog.classList.toggle("is-wide", state.step === "widgets");
   $("#cfg-count").innerHTML = `Step ${idx + 1} of ${steps.length}${step.time ? ` <span class="cfg-time">· ${step.time}</span>` : ""}`;
-  $("#cfg-bar").innerHTML = steps.map((s, i) => `<li class="${i <= idx ? "on" : ""}"></li>`).join("");
+  // The segments are kept between steps so each one can fill in its pixel steps.
+  const bar = $("#cfg-bar");
+  if (bar.children.length !== steps.length) bar.innerHTML = steps.map(() => "<li></li>").join("");
+  [...bar.children].forEach((li, i) => li.classList.toggle("on", i <= idx));
   for (const pane of $$(".pane")) pane.hidden = pane.dataset.pane !== state.step;
   const block = stepBlock(state.step);
   const next = $("#next");
@@ -550,10 +554,23 @@ function loadUrl() {
 
 function goTo(key, focus = true) {
   if (stepIndex(key) === -1 || stepIndex(key) > lastReachable()) return;
+  const back = stepIndex(key) < stepIndex(state.step);
   state.step = key;
   update();
   $("#cfg-body").scrollTop = 0;
+  enterPane(back);
   if (focus) document.getElementById(`pane-${key}`).focus({ preventScroll: true });
+}
+
+// A short slide of the new step's content; the frame never moves.
+function enterPane(back) {
+  const pane = $(`.pane[data-pane="${state.step}"]`);
+  pane.classList.remove("is-entering", "from-left");
+  void pane.offsetWidth;
+  pane.classList.add("is-entering");
+  pane.classList.toggle("from-left", back);
+  pane.addEventListener("animationend", () => pane.classList.remove("is-entering", "from-left"), { once: true });
+  if (state.step === "check") buildMark($("#setup .done-mark"));
 }
 
 function move(delta) {
@@ -573,6 +590,7 @@ function openSetup(from) {
   dialog.showModal();
   update();
   $("#cfg-body").scrollTop = 0;
+  if (state.step === "check") buildMark($("#setup .done-mark"));
   document.getElementById(`pane-${state.step}`).focus({ preventScroll: true });
 }
 
@@ -611,20 +629,17 @@ async function renderUsed() {
   } catch { /* the row stays hidden */ }
 }
 
-// Hero intro: each widget slot of the README fills with blocks of its own pixels that fall and
-// stack from the bottom row up, the mosaic sharpens in two steps, then the real GIF takes over.
-// Runs once; skipped with reduced motion (the head script never sets hero-intro then).
-const INTRO = {
-  cell: 10,              // native pixels per falling block
-  starts: [0, 200, 340], // ms at which each slot begins
+// Pixel build: the engine behind every pixel moment of the page. Each slot fills with blocks of
+// its own still image that fall and stack from the bottom row up, the mosaic sharpens in a few
+// steps, then the real GIF takes over. One-shot; callers skip it with reduced motion.
+const PIXEL = {
   rows: 620,             // ms between the bottom row and the top row starting to fall
   jitter: 140,           // random extra delay per block, ms
   fall: 420,             // ms a block takes to land
   drop: [3, 9],          // fall height, in blocks (min, max)
-  sharpen: [5, 2, 1],    // mosaic sizes after landing, native pixels
-  stepMs: 90,
-  fade: 220,
-  loadBudget: 1200,      // give up and show the GIFs if the stills take longer than this
+  stepMs: 90,            // ms per sharpening step
+  fade: 220,             // ms of the hand-over to the GIF
+  wait: 2500,            // after this, the GIF shows even if it has not loaded
 };
 
 function loadImage(src) {
@@ -636,7 +651,7 @@ function loadImage(src) {
   });
 }
 
-// The still reduced so one pixel stands for k×k native pixels (averaged by the browser).
+// The still reduced so one pixel stands for k×k of its pixels (averaged by the browser).
 function mosaic(img, k) {
   const c = document.createElement("canvas");
   c.width = Math.max(1, Math.round(img.naturalWidth / k));
@@ -648,32 +663,12 @@ function mosaic(img, k) {
   return c;
 }
 
-async function heroIntro() {
-  const root = document.documentElement;
-  const art = $(".hero-art");
-  if (!art || !root.classList.contains("hero-intro")) return;
-  const canvas = art.querySelector(".hero-fx");
-  const slots = [...art.querySelectorAll(".slot")];
-  let raf = 0, done = false;
-  const finish = () => {
-    if (done) return;
-    done = true;
-    cancelAnimationFrame(raf);
-    for (const s of slots) s.classList.add("is-live");
-    root.classList.remove("hero-intro");
-    window.removeEventListener("resize", finish);
-  };
-  if (document.hidden || window.scrollY > art.offsetTop) return finish();
-  window.addEventListener("resize", finish);
-
-  let stills;
-  try {
-    const timeout = new Promise((_, reject) => setTimeout(reject, INTRO.loadBudget));
-    stills = await Promise.race([Promise.all(slots.map((s) => loadImage(s.dataset.still))), timeout]);
-  } catch { return finish(); }
-  if (done) return;
-
-  // Geometry in device pixels, relative to the canvas.
+// slots: [{ rect: [x, y, w, h] in CSS px from the canvas' top left, still: loaded Image,
+//           start: ms, cell: still pixels per block, sharpen: [still pixels per step...],
+//           ready: () => the GIF can show, onLive: () => show it }]
+// Returns { done: Promise, stop() }; stop() shows every GIF at once.
+function pixelBuild(canvas, slots, options = {}) {
+  const o = { ...PIXEL, ...options };
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   const box = canvas.getBoundingClientRect();
   canvas.width = Math.round(box.width * dpr);
@@ -681,33 +676,42 @@ async function heroIntro() {
   const ctx = canvas.getContext("2d");
   const D = (v) => Math.round(v * dpr);
 
-  const plans = slots.map((slot, i) => {
-    const r = slot.getBoundingClientRect();
-    const x = r.left - box.left, y = r.top - box.top, w = r.width, h = r.height;
-    const levels = [INTRO.cell, ...INTRO.sharpen].map((k) => mosaic(stills[i], k));
+  const plans = slots.map((slot) => {
+    const [x, y, w, h] = slot.rect;
+    const levels = [slot.cell, ...slot.sharpen].map((k) => mosaic(slot.still, k));
     const coarse = levels[0];
     const cols = coarse.width, rowsN = coarse.height;
     const px = coarse.getContext("2d").getImageData(0, 0, cols, rowsN).data;
     const bw = w / cols, bh = h / rowsN;
-    const start = INTRO.starts[i] || 0;
+    const start = slot.start || 0;
     const blocks = [];
     for (let row = 0; row < rowsN; row++) {
       for (let col = 0; col < cols; col++) {
-        const o = (row * cols + col) * 4;
+        const i = (row * cols + col) * 4;
         const fromBottom = (rowsN - 1 - row) / Math.max(1, rowsN - 1);
         blocks.push({
           x0: D(x + col * bw), x1: D(x + (col + 1) * bw),
           y0: D(y + row * bh), y1: D(y + (row + 1) * bh),
-          color: `rgb(${px[o]},${px[o + 1]},${px[o + 2]})`,
-          delay: start + fromBottom * INTRO.rows + Math.random() * INTRO.jitter,
-          drop: INTRO.drop[0] + Math.floor(Math.random() * (INTRO.drop[1] - INTRO.drop[0] + 1)),
+          color: `rgb(${px[i]},${px[i + 1]},${px[i + 2]})`,
+          delay: start + fromBottom * o.rows + Math.random() * o.jitter,
+          drop: o.drop[0] + Math.floor(Math.random() * (o.drop[1] - o.drop[0] + 1)),
         });
       }
     }
-    const landed = start + INTRO.rows + INTRO.jitter + INTRO.fall;
-    return { slot, img: slot.querySelector("img"), levels, blocks, bh: D(bh), rect: [D(x), D(y), D(x + w) - D(x), D(y + h) - D(y)], landed, live: false, fadeAt: 0 };
+    const landed = start + o.rows + o.jitter + o.fall;
+    return { slot, levels, blocks, bh: D(bh), rect: [D(x), D(y), D(x + w) - D(x), D(y + h) - D(y)], landed, live: false, fadeAt: 0 };
   });
 
+  let raf = 0, over = false, resolve;
+  const done = new Promise((r) => { resolve = r; });
+  const stop = () => {
+    if (over) return;
+    over = true;
+    cancelAnimationFrame(raf);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (const p of plans) if (!p.live) { p.live = true; p.slot.onLive(); }
+    resolve();
+  };
   const easeOut = (p) => 1 - Math.pow(1 - p, 3);
   const t0 = performance.now();
   const frame = (now) => {
@@ -724,7 +728,7 @@ async function heroIntro() {
         ctx.rect(...p.rect);
         ctx.clip();
         for (const b of p.blocks) {
-          const q = (t - b.delay) / INTRO.fall;
+          const q = (t - b.delay) / o.fall;
           if (q <= 0) continue;
           // Stepped motion: the block moves down whole block heights and fades in three steps.
           const lift = q >= 1 ? 0 : Math.round(b.drop * (1 - easeOut(q))) * p.bh;
@@ -736,14 +740,14 @@ async function heroIntro() {
         continue;
       }
       // Sharpen through the mosaic levels, then hand over to the GIF once it has loaded.
-      const step = Math.min(p.levels.length - 1, 1 + Math.floor(sharpenAt / INTRO.stepMs));
-      const sharp = step === p.levels.length - 1 && sharpenAt >= INTRO.stepMs * (p.levels.length - 1);
-      if (sharp && !p.live && p.img.complete && p.img.naturalWidth) {
+      const step = Math.min(p.levels.length - 1, 1 + Math.floor(sharpenAt / o.stepMs));
+      const sharp = sharpenAt >= o.stepMs * (p.levels.length - 1);
+      if (sharp && !p.live && (p.slot.ready() || sharpenAt > o.wait)) {
         p.live = true;
         p.fadeAt = t;
-        p.slot.classList.add("is-live");
+        p.slot.onLive();
       }
-      const alpha = p.live ? 1 - (t - p.fadeAt) / INTRO.fade : 1;
+      const alpha = p.live ? 1 - (t - p.fadeAt) / o.fade : 1;
       if (alpha <= 0) continue;
       busy = true;
       ctx.globalAlpha = alpha;
@@ -752,9 +756,170 @@ async function heroIntro() {
       ctx.globalAlpha = 1;
     }
     if (busy) raf = requestAnimationFrame(frame);
-    else finish();
+    else stop();
   };
   raf = requestAnimationFrame(frame);
+  return { done, stop };
+}
+
+const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+const gifReady = (img) => img.complete && img.naturalWidth > 0;
+
+// Hero: the three slots of the README card, one after the other. The head script hides the GIFs
+// (class hero-intro) only when motion is allowed, and shows them after 4 s whatever happens.
+async function heroIntro() {
+  const root = document.documentElement;
+  const art = $(".hero-art");
+  if (!art || !root.classList.contains("hero-intro")) return;
+  const canvas = art.querySelector(".hero-fx");
+  const slots = [...art.querySelectorAll(".slot")];
+  let run = null, over = false;
+  const finish = () => {
+    if (over) return;
+    over = true;
+    if (run) run.stop();
+    for (const s of slots) s.classList.add("is-live");
+    root.classList.remove("hero-intro");
+    window.removeEventListener("resize", finish);
+  };
+  if (document.hidden || window.scrollY > art.offsetTop) return finish();
+  window.addEventListener("resize", finish);
+
+  let stills;
+  try {
+    const timeout = new Promise((_, reject) => setTimeout(reject, 1200));
+    stills = await Promise.race([Promise.all(slots.map((s) => loadImage(s.dataset.still))), timeout]);
+  } catch { return finish(); }
+  if (over) return;
+  const box = canvas.getBoundingClientRect();
+  const starts = [0, 200, 340];
+  run = pixelBuild(canvas, slots.map((slot, i) => {
+    const r = slot.getBoundingClientRect();
+    const img = slot.querySelector("img");
+    return {
+      rect: [r.left - box.left, r.top - box.top, r.width, r.height],
+      still: stills[i], start: starts[i], cell: 10, sharpen: [5, 2, 1],
+      ready: () => gifReady(img), onLive: () => slot.classList.add("is-live"),
+    };
+  }));
+  run.done.then(finish);
+}
+
+// Gallery: a card's thumbnail assembles from its pixels the first time it scrolls into view.
+// Cards that enter together are staggered; at most CARD_MAX builds run at once, the rest wait.
+const CARD_GAP = 110;
+const CARD_MAX = 4;
+function galleryIntro() {
+  if (reducedMotion() || !("IntersectionObserver" in window)) return;
+  const cards = $$(".card");
+  for (const c of cards) c.classList.add("is-assembling");
+  const show = (card) => card.classList.remove("is-assembling");
+  const runs = new Set();
+  const queue = [];
+  let lastStart = 0;
+
+  const startCard = async (card) => {
+    const w = BY_ID.get(card.dataset.id);
+    const media = card.querySelector(".card-media");
+    const img = media.querySelector("img");
+    let still;
+    try {
+      still = await Promise.race([loadImage(`stills/${w.file || w.id}.png`), new Promise((_, r) => setTimeout(r, 1500))]);
+    } catch { return show(card); }
+    if (!card.classList.contains("is-assembling") || card.hidden) return show(card);
+    // The GIF is contained in its box: the build covers exactly the drawn image.
+    const m = media.getBoundingClientRect(), b = img.getBoundingClientRect();
+    if (!m.width || !b.width) return show(card);
+    const scale = Math.min(b.width / w.w, b.height / w.h);
+    const dw = w.w * scale, dh = w.h * scale;
+    const canvas = document.createElement("canvas");
+    canvas.className = "card-fx";
+    canvas.setAttribute("aria-hidden", "true");
+    media.appendChild(canvas);
+    // Blocks of about 6 CSS pixels, whatever the card width.
+    const cell = still.naturalWidth / Math.max(8, dw / 6);
+    const now = performance.now();
+    const delay = Math.max(0, lastStart + CARD_GAP - now);
+    lastStart = now + delay;
+    const run = pixelBuild(canvas, [{
+      rect: [b.left - m.left + (b.width - dw) / 2, b.top - m.top + (b.height - dh) / 2, dw, dh],
+      still, start: delay, cell, sharpen: [cell / 2, cell / 4].filter((k) => k >= 1),
+      ready: () => gifReady(img), onLive: () => show(card),
+    }], { rows: 420, jitter: 120, fall: 360 });
+    runs.add(run);
+    await run.done;
+    runs.delete(run);
+    canvas.remove();
+    if (queue.length) startCard(queue.shift());
+  };
+
+  const io = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      if (!e.isIntersecting) continue;
+      io.unobserve(e.target);
+      if (runs.size < CARD_MAX) startCard(e.target); else queue.push(e.target);
+    }
+  }, { threshold: 0.35 });
+  for (const c of cards) io.observe(c);
+  // A resize or a filter change ends every build: the GIFs show as they are.
+  const stopAll = () => { for (const r of runs) r.stop(); };
+  window.addEventListener("resize", stopAll);
+  $("#filters").addEventListener("click", () => {
+    stopAll();
+    for (const c of queue) show(c);
+    queue.length = 0;
+  });
+}
+
+// Pixel marks that build themselves: the 16×16 mark is split into one rect per grid pixel, each
+// dropping in with a delay that starts from the bottom row. Called again to replay.
+function buildMark(host) {
+  if (!host) return;
+  const svg = host.querySelector("svg.mark");
+  if (!svg.dataset.split) {
+    const ns = "http://www.w3.org/2000/svg";
+    const cells = [];
+    for (const path of [...svg.querySelectorAll("path")]) {
+      for (const m of path.getAttribute("d").matchAll(/M(\d+) (\d+)h(\d+)v(\d+)/g)) {
+        const [x, y, w, h] = m.slice(1).map(Number);
+        for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) cells.push([x + i, y + j, path.getAttribute("class")]);
+      }
+      path.remove();
+    }
+    for (const [x, y, cls] of cells) {
+      const r = document.createElementNS(ns, "rect");
+      r.setAttribute("x", x);
+      r.setAttribute("y", y);
+      r.setAttribute("width", 1);
+      r.setAttribute("height", 1);
+      if (cls) r.setAttribute("class", cls);
+      svg.appendChild(r);
+    }
+    svg.dataset.split = "1";
+  }
+  if (reducedMotion()) return;
+  for (const r of svg.querySelectorAll("rect")) {
+    const y = Number(r.getAttribute("y"));
+    r.style.setProperty("--d", `${Math.round((15 - y) * 38 + Math.random() * 90)}ms`);
+  }
+  svg.classList.remove("is-building");
+  void svg.getBoundingClientRect();
+  svg.classList.add("is-building");
+}
+
+// The closing band's mark builds once, when the band comes into view.
+function closingIntro() {
+  const host = $(".closing-mark");
+  if (!host) return;
+  if (reducedMotion() || !("IntersectionObserver" in window)) return;
+  host.style.visibility = "hidden";
+  const io = new IntersectionObserver((entries) => {
+    if (!entries.some((e) => e.isIntersecting)) return;
+    io.disconnect();
+    host.style.visibility = "";
+    buildMark(host);
+  }, { threshold: 0.6 });
+  io.observe(host);
 }
 
 function init() {
@@ -766,6 +931,8 @@ function init() {
   heroIntro();
 
   renderGallery();
+  galleryIntro();
+  closingIntro();
   renderPicks();
   const open = loadUrl();
   const dialog = $("#setup");

@@ -11,4 +11,6 @@ if [ -f "$root/site/og.png" ]; then cp "$root/site/og.png" "$out/"; fi
 cp "$root"/examples/preview/*.gif "$out/widgets/"
 mkdir -p "$out/hero"
 cp "$root"/site/hero/*.png "$out/hero/"
+mkdir -p "$out/stills"
+cp "$root"/site/stills/*.png "$out/stills/"
 echo "Site assembled in $out"
