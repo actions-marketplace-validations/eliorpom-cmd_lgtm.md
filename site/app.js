@@ -610,8 +610,8 @@ function init() {
   }
 
   if ("IntersectionObserver" in window) {
-    // The selection bar hides once the setup is on screen.
-    new IntersectionObserver(([en]) => { state.setupVisible = en.isIntersecting; update(); }, { rootMargin: "0px 0px -40% 0px" }).observe($("#setup"));
+    // The selection bar hides once the setup is on screen, and stays hidden below it.
+    new IntersectionObserver(([en]) => { state.setupVisible = en.isIntersecting || en.boundingClientRect.top < 0; update(); }, { rootMargin: "0px 0px -40% 0px" }).observe($("#setup"));
     // The step in the middle of the screen is the active one.
     const steps = $$(".step");
     const io = new IntersectionObserver((entries) => {
