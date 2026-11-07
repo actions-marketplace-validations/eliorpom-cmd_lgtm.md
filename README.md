@@ -21,6 +21,8 @@ on:
   schedule:
     - cron: "30 0 * * *"   # every night, just after midnight UTC
   workflow_dispatch:
+  push:
+    paths: [.github/workflows/lgtm-md.yml]   # also runs as soon as you commit this file
 
 permissions:
   contents: write
@@ -49,9 +51,9 @@ jobs:
           git push
 ```
 
-**2. Run it once.** Open the **Actions** tab of your profile repository, pick **LGTM.md**, then **Run workflow**. About a minute later, the GIFs are in the `widgets/` folder.
+Committing the file starts the workflow right away. About a minute later, the GIFs are in the `widgets/` folder.
 
-**3. Show them in your README.** Paste one line per widget:
+**2. Show them in your README.** Paste one line per widget:
 
 ```html
 <a href="https://github.com/eliorpom-cmd/lgtm.md"><img src="widgets/grass.gif" alt="My last 90 days on GitHub" width="100%"></a>
@@ -65,7 +67,7 @@ The image links back here so visitors can find the project. A small credit line 
 <sub>Made with <a href="https://github.com/eliorpom-cmd/lgtm.md">LGTM.md</a></sub>
 ```
 
-From then on, the widgets redraw themselves every night.
+From then on, the widgets redraw themselves every night. To redraw them now, open the **Actions** tab, pick **LGTM.md**, then **Run workflow**.
 
 ## Count your private activity (optional)
 
