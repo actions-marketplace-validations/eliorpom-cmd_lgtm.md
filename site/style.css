@@ -446,8 +446,7 @@ html.modal-open { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
 
 /* Pixel burst on "Copied". */
-.burst { z-index: 40; width: 0; height: 0; pointer-events: none; }
-.burst span { position: absolute; left: 0; top: 0; width: 4px; height: 4px; }
+.btn-fx { z-index: 40; pointer-events: none; }
 
 /* Setup without page scroll: every step fills the fixed frame. Step 1 scrolls its tile grid only;
    steps 2 to 6 fit, with one flexible box (the README) that scales its content to the space left,

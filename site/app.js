@@ -380,41 +380,116 @@ async function copy(text, button) {
   if (!button.dataset.label) button.dataset.label = button.innerHTML;
   button.innerHTML = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Copied';
   button.classList.add("is-done");
-  pixelBurst(button);
   clearTimeout(button.timer);
   button.timer = setTimeout(() => { button.innerHTML = button.dataset.label; button.classList.remove("is-done"); }, 1600);
   toast.live("Copied");
 }
-// A short burst of square pixels around a button that just copied. Inside the open dialog, so it
-// shows above the page's modal layer; skipped with reduced motion.
-function pixelBurst(el) {
-  if (reducedMotion() || !el.animate) return;
+// Pixel effects on the pill buttons: a faint green wipe when the mouse enters one, and a burst of
+// square pixels from the point clicked. Both draw on a canvas laid over the button for the length
+// of the effect; skipped with reduced motion.
+const FX_GREENS = ["#0e4429", "#006d32", "#26a641", "#39d353"];
+const snapPx = (v) => Math.round(v / 2) * 2;
+
+function buttonFx(el, { margin, duration, init, draw }) {
+  if (reducedMotion()) return;
+  // Inside the open dialog the canvas goes in the dialog (the page behind sits below its top
+  // layer), positioned against it, as the dialog's opening transform makes it the reference box.
   const host = el.closest("dialog") || document.body;
-  const r = el.getBoundingClientRect(), h = host.getBoundingClientRect();
-  const layer = document.createElement("div");
-  layer.className = "burst";
-  layer.setAttribute("aria-hidden", "true");
-  // Fixed in the page, absolute in a dialog (a transformed or top-layer box is the reference).
   const inDialog = host !== document.body;
-  layer.style.left = `${r.left + r.width / 2 - (inDialog ? h.left : 0)}px`;
-  layer.style.top = `${r.top + r.height / 2 - (inDialog ? h.top : 0)}px`;
-  layer.style.position = inDialog ? "absolute" : "fixed";
+  const r = el.getBoundingClientRect(), h = host.getBoundingClientRect();
+  if (!r.width) return;
+  const W = r.width + margin * 2, H = r.height + margin * 2, dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const c = document.createElement("canvas");
+  c.className = "btn-fx";
+  c.setAttribute("aria-hidden", "true");
+  c.width = Math.round(W * dpr);
+  c.height = Math.round(H * dpr);
+  Object.assign(c.style, {
+    position: inDialog ? "absolute" : "fixed",
+    left: `${r.left - margin - (inDialog ? h.left : 0)}px`, top: `${r.top - margin - (inDialog ? h.top : 0)}px`,
+    width: `${W}px`, height: `${H}px`,
+  });
+  host.appendChild(c);
+  const ctx = c.getContext("2d");
+  const box = { w: r.width, h: r.height };
+  const state = init(box);
+  const t0 = performance.now();
+  const frame = (now) => {
+    const t = now - t0;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    if (t >= duration) return c.remove();
+    ctx.translate(margin, margin);
+    ctx.globalAlpha = 1;
+    draw(ctx, t, box, state);
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+}
+
+// Hover: a band of 4 px green pixels crosses the button from left to right, inside its shape.
+function hoverWipe(el) {
+  const sweep = 300, life = 180;
+  buttonFx(el, { margin: 0, duration: sweep + 80 + life,
+    init: ({ w, h }) => {
+      const cells = [];
+      for (let x = 0; x < w; x += 4) for (let y = 0; y < h; y += 4) cells.push({ x, y, d: (x / w) * sweep + Math.random() * 80 });
+      return cells;
+    },
+    draw: (ctx, t, { w, h }, cells) => {
+      ctx.beginPath();
+      ctx.roundRect(0, 0, w, h, h / 2);
+      ctx.clip();
+      ctx.globalAlpha = 0.35;
+      for (const c of cells) {
+        const q = t - c.d;
+        if (q <= 0 || q >= life) continue;
+        ctx.fillStyle = q < life / 3 ? FX_GREENS[3] : q < (life * 2) / 3 ? FX_GREENS[2] : FX_GREENS[1];
+        ctx.fillRect(c.x, c.y, 4, 4);
+      }
+    } });
+}
+
+// Click: 16 pixels leave the point clicked (the middle for a keyboard press) in stepped motion.
+function clickBurst(el, e) {
+  const r = el.getBoundingClientRect();
+  const pointer = e && e.detail > 0 && e.clientX;
+  const duration = 460, steps = 6, life = duration - 60;
   const colors = ["#3fb950", "#3fb950", "#9aa3ad"];
-  for (let i = 0; i < 14; i++) {
-    const s = document.createElement("span");
-    const angle = (i / 14) * Math.PI * 2 + Math.random() * 0.4;
-    const dist = r.width / 2 + 10 + Math.random() * 18;
-    const dx = Math.round(Math.cos(angle) * dist / 2) * 2, dy = Math.round(Math.sin(angle) * (r.height / 2 + 10 + Math.random() * 14) / 2) * 2;
-    s.style.background = colors[i % colors.length];
-    layer.appendChild(s);
-    s.animate([
-      // Start on the button's edge, so the pixels leave it rather than cover the label.
-      { transform: `translate(calc(-50% + ${Math.round(dx * 0.55)}px), calc(-50% + ${Math.round(dy * 0.55)}px)) scale(1)`, opacity: 1 },
-      { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(0.5)`, opacity: 0 },
-    ], { duration: 420, easing: "steps(5, end)", fill: "forwards" });
-  }
-  host.appendChild(layer);
-  setTimeout(() => layer.remove(), 480);
+  buttonFx(el, { margin: 70, duration,
+    init: ({ w, h }) => {
+      const ox = pointer ? e.clientX - r.left : w / 2, oy = pointer ? e.clientY - r.top : h / 2;
+      return Array.from({ length: 16 }, (_, i) => {
+        const a = (i / 16) * Math.PI * 2 + Math.random() * 0.5;
+        const dist = 26 + Math.random() * 20;
+        return { ox, oy, ex: ox + Math.cos(a) * dist, ey: oy + Math.sin(a) * dist * 0.8, c: colors[i % colors.length] };
+      });
+    },
+    draw: (ctx, t, box, ps) => {
+      const q = Math.floor((t / life) * steps) / steps;
+      if (q >= 1) return;
+      const ease = 1 - Math.pow(1 - q, 2);
+      ctx.globalAlpha = 1 - q * 0.9;
+      for (const p of ps) {
+        ctx.fillStyle = p.c;
+        ctx.fillRect(snapPx(p.ox + (p.ex - p.ox) * ease - 2), snapPx(p.oy + (p.ey - p.oy) * ease - 2), 4, 4);
+      }
+    } });
+}
+
+function buttonEffects() {
+  const usable = (b) => b && !b.disabled && b.getAttribute("aria-disabled") !== "true";
+  document.addEventListener("pointerover", (e) => {
+    if (e.pointerType !== "mouse") return;
+    const b = e.target.closest(".pill-btn");
+    // Only on entering the button, not when moving between its children.
+    if (!usable(b) || b.contains(e.relatedTarget)) return;
+    hoverWipe(b);
+  });
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest(".pill-btn");
+    if (usable(b)) clickBurst(b, e);
+  });
 }
 
 // Screen readers hear it through a live region inside the dialog: the page behind a modal is inert.
@@ -1263,6 +1338,7 @@ function init() {
   renderGallery();
   galleryMotion();
   closingIntro();
+  buttonEffects();
   renderPicks();
   loadUrl();
   const dialog = $("#setup");
