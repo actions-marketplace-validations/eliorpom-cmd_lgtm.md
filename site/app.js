@@ -505,6 +505,9 @@ function clickBurst(el, e) {
     } });
 }
 
+// Get started and Add to your README (they open the setup), Copy, and Create the workflow.
+const BURST_BUTTONS = "[data-open], .copy, #create";
+
 function buttonEffects() {
   const usable = (b) => b && !b.disabled && b.getAttribute("aria-disabled") !== "true";
   document.addEventListener("pointerover", (e) => {
@@ -523,9 +526,11 @@ function buttonEffects() {
   // The canvas does not follow the page: a scroll or a resize ends it at once.
   addEventListener("scroll", () => endSpot(true), { capture: true, passive: true });
   addEventListener("resize", () => endSpot(true));
+  // The burst rewards the clicks that get something done; Continue, Back, Select all and the like
+  // would replay it on every step and tire the eye.
   document.addEventListener("click", (e) => {
     const b = e.target.closest(".pill-btn");
-    if (usable(b)) clickBurst(b, e);
+    if (usable(b) && b.matches(BURST_BUTTONS)) clickBurst(b, e);
   });
 }
 
