@@ -1133,8 +1133,8 @@ function loadImage(src) {
 // The still reduced so one pixel stands for k×k of its pixels (averaged by the browser).
 function mosaic(img, k) {
   const c = document.createElement("canvas");
-  c.width = Math.max(1, Math.round(img.naturalWidth / k));
-  c.height = Math.max(1, Math.round(img.naturalHeight / k));
+  c.width = Math.max(1, Math.round((img.naturalWidth || img.width) / k));
+  c.height = Math.max(1, Math.round((img.naturalHeight || img.height) / k));
   const g = c.getContext("2d", { willReadFrequently: true });
   g.imageSmoothingEnabled = true;
   g.imageSmoothingQuality = "high";
@@ -1260,6 +1260,7 @@ async function heroIntro() {
     for (const s of slots) s.classList.add("is-live");
     root.classList.remove("hero-intro");
     window.removeEventListener("resize", finish);
+    heroCycle();
   };
   if (document.hidden || window.scrollY > art.offsetTop) return finish();
   window.addEventListener("resize", finish);
@@ -1282,6 +1283,106 @@ async function heroIntro() {
     };
   }));
   run.done.then(finish);
+}
+
+// Hero: after the intro, the README card shows other widgets every few seconds, each set
+// rebuilding from its pixels. The top slot takes a wide widget; the second row two small ones or
+// one wide one. Pauses off screen, in a hidden tab, under the pointer or focus, and with the
+// pause button; never runs with reduced motion (the intro does not run then either).
+const HERO_EVERY = 4500;
+const HERO_SETS = [
+  { top: "grass", pair: ["flame", "counter"] },
+  { top: "forest", full: "ecg" },
+  { top: "fireworks", pair: ["median", "donut"] },
+  { top: "cherry-tree", full: "records" },
+  { top: "hourglass", full: "departures" },
+  { top: "duel", pair: ["flame", "counter"] },
+  { top: "fireworks-commits", pair: ["median", "donut"] },
+];
+function heroCycle() {
+  const art = $(".hero-art");
+  if (!art || reducedMotion() || heroCycle.on) return;
+  heroCycle.on = true;
+  const canvas = art.querySelector(".hero-fx");
+  const top = art.querySelector(".readme-body > .slot");
+  const [left, right] = art.querySelectorAll(".slot-row > .slot:not(.slot-full)");
+  const full = art.querySelector(".slot-full");
+  const pause = art.querySelector(".hero-pause");
+  let i = 0, timer = 0, run = null, inView = true, hover = false;
+  const fileOf = (id) => { const w = BY_ID.get(id); return w.file || w.id; };
+
+  // The still drawn into the slot's shape on the widgets' background, as the GIF will show.
+  const fitted = (img, rect) => {
+    const R = rect.width / rect.height, iw = img.naturalWidth, ih = img.naturalHeight;
+    const c = document.createElement("canvas");
+    c.width = Math.round(iw / ih > R ? iw : ih * R);
+    c.height = Math.round(iw / ih > R ? iw / R : ih);
+    const g = c.getContext("2d");
+    g.fillStyle = "#0d1117";
+    g.fillRect(0, 0, c.width, c.height);
+    g.drawImage(img, (c.width - iw) / 2, (c.height - ih) / 2);
+    return c;
+  };
+
+  const schedule = () => {
+    clearTimeout(timer);
+    if (pause.getAttribute("aria-pressed") === "true" || hover || !inView || document.hidden || run) return;
+    timer = setTimeout(next, HERO_EVERY);
+  };
+
+  const next = async () => {
+    i = (i + 1) % HERO_SETS.length;
+    const set = HERO_SETS[i];
+    const jobs = [{ slot: top, id: set.top }];
+    if (set.full) jobs.push({ slot: full, id: set.full });
+    else jobs.push({ slot: left, id: set.pair[0] }, { slot: right, id: set.pair[1] });
+    let stills;
+    try {
+      stills = await Promise.race([Promise.all(jobs.map((j) => loadImage(`stills/${fileOf(j.id)}.webp`))), new Promise((_, r) => setTimeout(r, 2000))]);
+    } catch { return schedule(); }
+    // The wide slot must be in the layout to be measured; it stays invisible until it is live.
+    if (set.full && full.hidden) { full.classList.add("is-off"); full.hidden = false; }
+    art.classList.add("is-cycling");
+    const box = canvas.getBoundingClientRect();
+    let pairLive = 0;
+    run = pixelBuild(canvas, jobs.map((j, k) => {
+      const r = j.slot.getBoundingClientRect();
+      const gif = new Image();
+      gif.src = `widgets/${fileOf(j.id)}.gif`;
+      const still = fitted(stills[k], r);
+      const cell = still.width / Math.max(8, r.width / 12);
+      return {
+        rect: [r.left - box.left, r.top - box.top, r.width, r.height],
+        still, start: k * 140, cell, sharpen: [cell / 2, cell / 4].filter((v) => v >= 1),
+        ready: () => gifReady(gif),
+        onLive: () => {
+          j.slot.querySelector("img").src = gif.src;
+          j.slot.classList.remove("is-off");
+          if (j.slot === full) { left.classList.add("is-off"); right.classList.add("is-off"); }
+          else if (j.slot !== top && ++pairLive === 1) { full.hidden = true; full.classList.remove("is-off"); }
+        },
+      };
+    }), { rows: 380, jitter: 100, fall: 320 });
+    await run.done;
+    run = null;
+    art.classList.remove("is-cycling");
+    schedule();
+  };
+
+  pause.hidden = false;
+  pause.addEventListener("click", () => {
+    const paused = pause.getAttribute("aria-pressed") !== "true";
+    pause.setAttribute("aria-pressed", String(paused));
+    pause.setAttribute("aria-label", paused ? "Play the widgets" : "Pause the widgets");
+    schedule();
+  });
+  art.addEventListener("pointerenter", (e) => { if (e.pointerType === "mouse") { hover = true; schedule(); } });
+  art.addEventListener("pointerleave", () => { hover = false; schedule(); });
+  new IntersectionObserver((entries) => { inView = entries.some((e) => e.isIntersecting); schedule(); }, { threshold: 0.3 }).observe(art);
+  document.addEventListener("visibilitychange", schedule);
+  // A resize moves the slots under the canvas: the build ends and the GIFs show.
+  window.addEventListener("resize", () => run?.stop());
+  schedule();
 }
 
 // The gallery shows still images (about 125 KB in all, instead of 10 MB of GIFs). A card plays its
