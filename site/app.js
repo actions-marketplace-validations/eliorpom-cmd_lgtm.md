@@ -384,20 +384,19 @@ async function copy(text, button) {
   button.timer = setTimeout(() => { button.innerHTML = button.dataset.label; button.classList.remove("is-done"); }, 1600);
   toast.live("Copied");
 }
-// Pixel effects on the pill buttons: a faint green wipe when the mouse enters one, and a burst of
+// Pixel effects on the pill buttons: a pixel spotlight that follows the mouse over one, and a burst of
 // square pixels from the point clicked. Both draw on a canvas laid over the button for the length
 // of the effect; skipped with reduced motion.
 const FX_GREENS = ["#0e4429", "#006d32", "#26a641", "#39d353"];
 const snapPx = (v) => Math.round(v / 2) * 2;
 
-function buttonFx(el, { margin, duration, init, draw }) {
-  if (reducedMotion()) return;
-  // Inside the open dialog the canvas goes in the dialog (the page behind sits below its top
-  // layer), positioned against it, as the dialog's opening transform makes it the reference box.
+// A canvas laid over a button plus a margin. Inside the open dialog it goes in the dialog (the
+// page behind sits below its top layer), positioned against it, as the dialog's opening transform
+// makes it the reference box. begin() clears it and puts the origin on the button's top left.
+function fxCanvas(el, margin) {
   const host = el.closest("dialog") || document.body;
   const inDialog = host !== document.body;
   const r = el.getBoundingClientRect(), h = host.getBoundingClientRect();
-  if (!r.width) return;
   const W = r.width + margin * 2, H = r.height + margin * 2, dpr = Math.min(window.devicePixelRatio || 1, 2);
   const c = document.createElement("canvas");
   c.className = "btn-fx";
@@ -411,43 +410,72 @@ function buttonFx(el, { margin, duration, init, draw }) {
   });
   host.appendChild(c);
   const ctx = c.getContext("2d");
-  const box = { w: r.width, h: r.height };
+  return { c, ctx, r, w: r.width, h: r.height,
+    begin() { ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H); ctx.translate(margin, margin); ctx.globalAlpha = 1; } };
+}
+
+function buttonFx(el, { margin, duration, init, draw }) {
+  if (reducedMotion() || !el.getBoundingClientRect().width) return;
+  const o = fxCanvas(el, margin);
+  const box = { w: o.w, h: o.h };
   const state = init(box);
   const t0 = performance.now();
   const frame = (now) => {
     const t = now - t0;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, W, H);
-    if (t >= duration) return c.remove();
-    ctx.translate(margin, margin);
-    ctx.globalAlpha = 1;
-    draw(ctx, t, box, state);
+    o.begin();
+    if (t >= duration) return o.c.remove();
+    draw(o.ctx, t, box, state);
     requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);
 }
 
-// Hover: a band of 4 px green pixels crosses the button from left to right, inside its shape.
-function hoverWipe(el) {
-  const sweep = 300, life = 180;
-  buttonFx(el, { margin: 0, duration: sweep + 80 + life,
-    init: ({ w, h }) => {
-      const cells = [];
-      for (let x = 0; x < w; x += 4) for (let y = 0; y < h; y += 4) cells.push({ x, y, d: (x / w) * sweep + Math.random() * 80 });
-      return cells;
-    },
-    draw: (ctx, t, { w, h }, cells) => {
-      ctx.beginPath();
-      ctx.roundRect(0, 0, w, h, h / 2);
-      ctx.clip();
-      ctx.globalAlpha = 0.35;
-      for (const c of cells) {
-        const q = t - c.d;
-        if (q <= 0 || q >= life) continue;
-        ctx.fillStyle = q < life / 3 ? FX_GREENS[3] : q < (life * 2) / 3 ? FX_GREENS[2] : FX_GREENS[1];
-        ctx.fillRect(c.x, c.y, 4, 4);
-      }
-    } });
+// Hover: the 4 px pixels under the pointer light up in three rings and follow it. White buttons
+// get a deep green multiplied over them (the label stays black); dark ones the bright green.
+const SPOT = {
+  light: { color: "#1a7f37", alphas: [0.22, 0.42, 0.68], blend: "multiply" },
+  dark: { color: "#39d353", alphas: [0.1, 0.2, 0.34], blend: "" },
+};
+const isLightButton = (el) => {
+  const m = getComputedStyle(el).backgroundColor.match(/[\d.]+/g);
+  if (!m || (m.length > 3 && Number(m[3]) < 0.5)) return false;
+  return (0.299 * m[0] + 0.587 * m[1] + 0.114 * m[2]) / 255 > 0.6;
+};
+let spot = null;
+function startSpot(el, e) {
+  endSpot(true);
+  if (reducedMotion() || !el.getBoundingClientRect().width) return;
+  const o = fxCanvas(el, 0);
+  const tone = isLightButton(el) ? SPOT.light : SPOT.dark;
+  o.c.style.mixBlendMode = tone.blend;
+  const s = { el, o, x: e.clientX - o.r.left, y: e.clientY - o.r.top, fade: 1, leaving: false, raf: 0 };
+  const frame = () => {
+    o.begin();
+    const g = o.ctx;
+    g.beginPath();
+    g.roundRect(0, 0, o.w, o.h, o.h / 2);
+    g.clip();
+    g.fillStyle = tone.color;
+    for (let x = 0; x < o.w; x += 4) for (let y = 0; y < o.h; y += 4) {
+      const d = Math.hypot(x + 2 - s.x, y + 2 - s.y);
+      const ring = d < 10 ? 2 : d < 20 ? 1 : d < 32 ? 0 : -1;
+      if (ring < 0) continue;
+      g.globalAlpha = tone.alphas[ring] * s.fade;
+      g.fillRect(x, y, 4, 4);
+    }
+    // On leaving, it goes out in three steps.
+    if (s.leaving && (s.fade -= 0.34) <= 0) return endSpot(true);
+    s.raf = requestAnimationFrame(frame);
+  };
+  s.raf = requestAnimationFrame(frame);
+  spot = s;
+}
+function endSpot(now) {
+  if (!spot) return;
+  if (!now) { spot.leaving = true; return; }
+  cancelAnimationFrame(spot.raf);
+  spot.o.c.remove();
+  spot = null;
 }
 
 // Click: 16 pixels leave the point clicked (the middle for a keyboard press) in stepped motion.
@@ -484,8 +512,17 @@ function buttonEffects() {
     const b = e.target.closest(".pill-btn");
     // Only on entering the button, not when moving between its children.
     if (!usable(b) || b.contains(e.relatedTarget)) return;
-    hoverWipe(b);
+    startSpot(b, e);
   });
+  document.addEventListener("pointermove", (e) => {
+    if (spot && !spot.leaving && e.target.closest(".pill-btn") === spot.el) { spot.x = e.clientX - spot.o.r.left; spot.y = e.clientY - spot.o.r.top; }
+  });
+  document.addEventListener("pointerout", (e) => {
+    if (spot && e.target.closest(".pill-btn") === spot.el && !spot.el.contains(e.relatedTarget)) endSpot(false);
+  });
+  // The canvas does not follow the page: a scroll or a resize ends it at once.
+  addEventListener("scroll", () => endSpot(true), { capture: true, passive: true });
+  addEventListener("resize", () => endSpot(true));
   document.addEventListener("click", (e) => {
     const b = e.target.closest(".pill-btn");
     if (usable(b)) clickBurst(b, e);

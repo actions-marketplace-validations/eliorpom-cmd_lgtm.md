@@ -53,7 +53,8 @@ h3 { font-size: 22px; line-height: 1.25; letter-spacing: -0.02em; }
 
 /* Buttons: one shape (pill), two sizes (44 / 32), two styles (solid / ghost). */
 .pill-btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--s-8); height: 44px; padding: 0 var(--s-24); border: 1px solid var(--text); border-radius: 999px; background: var(--text); color: var(--bg); font: 500 15px/1 var(--sans); text-decoration: none; white-space: nowrap; cursor: pointer; transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, opacity 180ms ease, transform 160ms var(--ease); }
-.pill-btn:hover { opacity: 0.88; }
+/* No dimming on hover: the pixel spotlight (app.js) is the hover state. */
+.pill-btn:hover { opacity: 1; }
 .pill-btn.small { height: 32px; padding: 0 var(--s-12); font-size: 14px; }
 .pill-btn.ghost { background: transparent; border-color: var(--line-2); color: var(--text); }
 .pill-btn.ghost:hover { opacity: 1; border-color: var(--faint); }
