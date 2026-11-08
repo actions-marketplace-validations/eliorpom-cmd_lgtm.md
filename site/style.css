@@ -92,8 +92,6 @@ h3 { font-size: 22px; line-height: 1.25; letter-spacing: -0.02em; }
 .card-hit { all: unset; cursor: pointer; }
 .card-hit::after { content: ""; position: absolute; inset: 0; z-index: 2; border-radius: 14px; }
 .card:has(.card-hit:focus-visible) { outline: 2px solid var(--text); outline-offset: 3px; }
-.card-fx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-.card.is-assembling .card-media img { opacity: 0; }
 .card-body { display: flex; flex-direction: column; flex: 1; padding: var(--s-16) var(--s-16) var(--s-16); }
 .card-name { font: 500 18px/1.25 var(--display); letter-spacing: -0.015em; }
 .card-id { margin-top: var(--s-4); font: 400 12px/1.4 var(--mono); color: var(--faint); }
@@ -427,7 +425,11 @@ html.modal-open { overflow: hidden; }
   .picks { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-8); }
   /* On phones the README sits above the thumbnails as one row. */
   .pick-layout { grid-template-columns: minmax(0, 1fr); gap: var(--s-12); }
-  .picked-count { margin-left: 0; }
+  /* One line on phones: the mode switch on the left, Select all on the right. The count would
+     push Select all to a second line, and the tiles already show what is selected. */
+  .pane-tools { flex-wrap: nowrap; }
+  .picked-count { display: none; }
+  #pick-all { margin-left: auto; flex: none; }
   /* Narrower numbers and a two-column hang leave room for a whole URL on one line. */
   .ln { grid-template-columns: 16px minmax(0, 1fr); column-gap: var(--s-8); padding-right: var(--s-8); }
   .lc { --hang: 2ch; }
@@ -539,7 +541,6 @@ html.modal-open { overflow: hidden; }
   #setup .pane-actions, #setup .run-readme { margin-top: var(--s-12); }
   .run-detail { font-size: 13px; }
 }
-@media (max-width: 380px) { .picked-count { display: none; } }
 /* A friend's login error takes the place of the duel hint. */
 .rival:has(#rival-error:not([hidden])) #rival-help { display: none; }
 @media (max-width: 380px) {

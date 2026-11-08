@@ -1167,72 +1167,6 @@ async function heroIntro() {
   run.done.then(finish);
 }
 
-// Gallery: a card's thumbnail assembles from its pixels the first time it scrolls into view.
-// Cards that enter together are staggered; at most CARD_MAX builds run at once, the rest wait.
-const CARD_GAP = 110;
-const CARD_MAX = 4;
-function galleryIntro() {
-  if (reducedMotion() || !("IntersectionObserver" in window)) return;
-  const cards = $$(".card");
-  for (const c of cards) c.classList.add("is-assembling");
-  const show = (card) => { card.classList.remove("is-assembling"); galleryMotion.built?.(card); };
-  const runs = new Set();
-  const queue = [];
-  let lastStart = 0;
-
-  const startCard = async (card) => {
-    const w = BY_ID.get(card.dataset.id);
-    const media = card.querySelector(".card-media");
-    const img = media.querySelector(".card-still");
-    let still;
-    try {
-      still = await Promise.race([loadImage(`stills/${w.file || w.id}.webp`), new Promise((_, r) => setTimeout(r, 1500))]);
-    } catch { return show(card); }
-    if (!card.classList.contains("is-assembling") || card.hidden) return show(card);
-    // The GIF is contained in its box: the build covers exactly the drawn image.
-    const m = media.getBoundingClientRect(), b = img.getBoundingClientRect();
-    if (!m.width || !b.width) return show(card);
-    const scale = Math.min(b.width / w.w, b.height / w.h);
-    const dw = w.w * scale, dh = w.h * scale;
-    const canvas = document.createElement("canvas");
-    canvas.className = "card-fx";
-    canvas.setAttribute("aria-hidden", "true");
-    media.appendChild(canvas);
-    // Blocks of about 6 CSS pixels, whatever the card width.
-    const cell = still.naturalWidth / Math.max(8, dw / 6);
-    const now = performance.now();
-    const delay = Math.max(0, lastStart + CARD_GAP - now);
-    lastStart = now + delay;
-    const run = pixelBuild(canvas, [{
-      rect: [b.left - m.left + (b.width - dw) / 2, b.top - m.top + (b.height - dh) / 2, dw, dh],
-      still, start: delay, cell, sharpen: [cell / 2, cell / 4].filter((k) => k >= 1),
-      ready: () => gifReady(img), onLive: () => show(card),
-    }], { rows: 420, jitter: 120, fall: 360 });
-    runs.add(run);
-    await run.done;
-    runs.delete(run);
-    canvas.remove();
-    if (queue.length) startCard(queue.shift());
-  };
-
-  const io = new IntersectionObserver((entries) => {
-    for (const e of entries) {
-      if (!e.isIntersecting) continue;
-      io.unobserve(e.target);
-      if (runs.size < CARD_MAX) startCard(e.target); else queue.push(e.target);
-    }
-  }, { threshold: 0.35 });
-  for (const c of cards) io.observe(c);
-  // A resize or a filter change ends every build: the GIFs show as they are.
-  const stopAll = () => { for (const r of runs) r.stop(); };
-  window.addEventListener("resize", stopAll);
-  $("#filters").addEventListener("click", () => {
-    stopAll();
-    for (const c of queue) show(c);
-    queue.length = 0;
-  });
-}
-
 // The gallery shows still images (about 125 KB in all, instead of 10 MB of GIFs). A card plays its
 // GIF while the pointer is over it or it has the focus; on touch screens, while it is on screen.
 function galleryMotion() {
@@ -1255,14 +1189,9 @@ function galleryMotion() {
   grid.addEventListener("focusout", (e) => { const c = e.target.closest(".card"); if (c && !c.contains(e.relatedTarget) && !c.matches(":hover")) pause(c); });
   if (!matchMedia("(hover: none)").matches || reducedMotion() || !("IntersectionObserver" in window)) return;
   const io = new IntersectionObserver((entries) => {
-    for (const e of entries) e.isIntersecting && !e.target.classList.contains("is-assembling") ? play(e.target) : pause(e.target);
+    for (const e of entries) e.isIntersecting ? play(e.target) : pause(e.target);
   }, { threshold: 0.6 });
   for (const c of $$(".card")) io.observe(c);
-  // A card that was still assembling when it came into view starts playing once it is built.
-  galleryMotion.built = (card) => {
-    const r = card.getBoundingClientRect();
-    if (r.left >= 0 && r.right <= innerWidth && r.top < innerHeight && r.bottom > 0) play(card);
-  };
 }
 
 // Pixel marks that build themselves: the 16×16 mark is split into one rect per grid pixel, each
@@ -1292,13 +1221,20 @@ function buildMark(host) {
     svg.dataset.split = "1";
   }
   if (reducedMotion()) return;
+  let last = 0;
   for (const r of svg.querySelectorAll("rect")) {
     const y = Number(r.getAttribute("y"));
-    r.style.setProperty("--d", `${Math.round((15 - y) * 38 + Math.random() * 90)}ms`);
+    const d = Math.round((15 - y) * 38 + Math.random() * 90);
+    last = Math.max(last, d);
+    r.style.setProperty("--d", `${d}ms`);
   }
+  clearTimeout(svg.buildTimer);
   svg.classList.remove("is-building");
   void svg.getBoundingClientRect();
   svg.classList.add("is-building");
+  // Mobile Safari can leave an SVG animation frozen halfway (while scrolling, for one): once the
+  // last pixel is due to have landed, drop the animation so the whole mark shows as it is.
+  svg.buildTimer = setTimeout(() => svg.classList.remove("is-building"), last + 240 + 80);
 }
 
 // The closing band's mark builds once, when the band comes into view.
@@ -1325,7 +1261,6 @@ function init() {
   heroIntro();
 
   renderGallery();
-  galleryIntro();
   galleryMotion();
   closingIntro();
   renderPicks();
