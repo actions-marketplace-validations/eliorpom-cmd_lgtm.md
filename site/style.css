@@ -106,7 +106,8 @@ h3 { font-size: 22px; line-height: 1.25; letter-spacing: -0.02em; }
 .seg button:hover { color: var(--text); }
 .seg button[aria-pressed="true"] { background: var(--text); color: var(--bg); }
 .field { display: grid; gap: var(--s-8); margin-top: var(--s-16); font-size: 14px; }
-.field input { width: 100%; max-width: 340px; height: 44px; padding: 0 var(--s-16); background: var(--panel); border: 1px solid var(--line-2); border-radius: 999px; font: 400 15px/1 var(--sans); color: var(--text); transition: border-color 180ms ease; }
+/* 16 px: below that, iOS Safari zooms the page when the field gets the focus. */
+.field input { width: 100%; max-width: 340px; height: 44px; padding: 0 var(--s-16); background: var(--panel); border: 1px solid var(--line-2); border-radius: 999px; font: 400 16px/1 var(--sans); color: var(--text); transition: border-color 180ms ease; }
 .field input::placeholder { color: var(--faint); }
 .field input:hover, .field input:focus { border-color: var(--faint); outline: none; }
 .field input[aria-invalid="true"] { border-color: var(--red); }
