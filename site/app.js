@@ -1286,10 +1286,11 @@ async function heroIntro() {
 }
 
 // Hero: after the intro, the README card shows other widgets every few seconds, each set
-// rebuilding from its pixels (about 1 s). The top slot takes a wide widget; the second row two small ones or
-// one wide one. Pauses off screen, in a hidden tab, under the pointer or focus, and with the
-// pause button; never runs with reduced motion (the intro does not run then either).
-const HERO_EVERY = 1800;
+// rebuilding from its pixels. The top slot takes a wide widget; the second row two small ones or
+// one wide one. Dots under the card show the sets and how long until the next one. Pauses off
+// screen, in a hidden tab, with the pointer on the card and with the pause button; never runs
+// with reduced motion (the intro does not run then either).
+const HERO_EVERY = 4000;
 const HERO_SETS = [
   { top: "grass", pair: ["flame", "counter"] },
   { top: "forest", full: "ecg" },
@@ -1307,9 +1308,27 @@ function heroCycle() {
   const top = art.querySelector(".readme-body > .slot");
   const [left, right] = art.querySelectorAll(".slot-row > .slot:not(.slot-full)");
   const full = art.querySelector(".slot-full");
+  const dotsBox = art.querySelector(".hero-dots");
   const pause = art.querySelector(".hero-pause");
-  let i = 0, timer = 0, run = null, inView = true, hover = false;
+  let i = 0, timer = 0, run = null, inView = true, hover = false, token = 0;
+  // Time already shown of the current set, so a pause resumes where the bar stopped.
+  let elapsed = 0, startedAt = 0;
   const fileOf = (id) => { const w = BY_ID.get(id); return w.file || w.id; };
+  const nameOf = (id) => BY_ID.get(id).name;
+
+  // One pixel per set under the card; the current one fills until the next set.
+  dotsBox.style.setProperty("--hero-every", `${HERO_EVERY}ms`);
+  const list = dotsBox.querySelector(".hero-dot-list");
+  list.innerHTML = HERO_SETS.map((set, k) => {
+    const names = [set.top, ...(set.full ? [set.full] : set.pair)].map(nameOf).join(", ");
+    return `<button class="hero-dot" type="button" aria-label="Show ${esc(names)}"></button>`;
+  }).join("");
+  const dots = [...list.children];
+  const markDot = () => dots.forEach((d, k) => {
+    d.classList.toggle("is-on", k === i);
+    d.classList.remove("is-running");
+    if (k === i) d.setAttribute("aria-current", "true"); else d.removeAttribute("aria-current");
+  });
 
   // The still drawn into the slot's shape on the widgets' background, as the GIF will show.
   const fitted = (img, rect) => {
@@ -1326,34 +1345,53 @@ function heroCycle() {
 
   const schedule = () => {
     clearTimeout(timer);
-    if (pause.getAttribute("aria-pressed") === "true" || hover || !inView || document.hidden || run) return;
-    timer = setTimeout(next, HERO_EVERY);
+    const blocked = pause.getAttribute("aria-pressed") === "true" || hover || !inView || document.hidden;
+    dotsBox.classList.toggle("is-paused", blocked);
+    if (run) return;
+    if (blocked) {
+      if (startedAt) { elapsed += performance.now() - startedAt; startedAt = 0; }
+      return;
+    }
+    const dot = dots[i];
+    if (!dot.classList.contains("is-running")) { void dot.offsetWidth; dot.classList.add("is-running"); }
+    startedAt = performance.now();
+    timer = setTimeout(() => show((i + 1) % HERO_SETS.length), Math.max(0, HERO_EVERY - elapsed));
   };
 
-  const next = async () => {
-    i = (i + 1) % HERO_SETS.length;
+  // A dot clicked during a build ends it: the latest call wins (token).
+  const show = async (k) => {
+    if (k === i && !run) return;
+    const my = ++token;
+    run?.stop();
+    clearTimeout(timer);
+    i = k;
+    elapsed = 0;
+    startedAt = 0;
+    markDot();
     const set = HERO_SETS[i];
     const jobs = [{ slot: top, id: set.top }];
     if (set.full) jobs.push({ slot: full, id: set.full });
     else jobs.push({ slot: left, id: set.pair[0] }, { slot: right, id: set.pair[1] });
+    run = { stop() {} };
     let stills;
     try {
       stills = await Promise.race([Promise.all(jobs.map((j) => loadImage(`stills/${fileOf(j.id)}.webp`))), new Promise((_, r) => setTimeout(r, 2000))]);
-    } catch { return schedule(); }
+    } catch { if (my === token) { run = null; schedule(); } return; }
+    if (my !== token) return;
     // The wide slot must be in the layout to be measured; it stays invisible until it is live.
     if (set.full && full.hidden) { full.classList.add("is-off"); full.hidden = false; }
     art.classList.add("is-cycling");
     const box = canvas.getBoundingClientRect();
     let pairLive = 0;
-    run = pixelBuild(canvas, jobs.map((j, k) => {
+    run = pixelBuild(canvas, jobs.map((j, n) => {
       const r = j.slot.getBoundingClientRect();
       const gif = new Image();
       gif.src = `widgets/${fileOf(j.id)}.gif`;
-      const still = fitted(stills[k], r);
+      const still = fitted(stills[n], r);
       const cell = still.width / Math.max(8, r.width / 12);
       return {
         rect: [r.left - box.left, r.top - box.top, r.width, r.height],
-        still, start: k * 100, cell, sharpen: [cell / 2, cell / 4].filter((v) => v >= 1),
+        still, start: n * 140, cell, sharpen: [cell / 2, cell / 4].filter((v) => v >= 1),
         ready: () => gifReady(gif),
         onLive: () => {
           j.slot.querySelector("img").src = gif.src;
@@ -1362,22 +1400,30 @@ function heroCycle() {
           else if (j.slot !== top && ++pairLive === 1) { full.hidden = true; full.classList.remove("is-off"); }
         },
       };
-    }), { rows: 300, jitter: 80, fall: 260 });
+    }), { rows: 380, jitter: 100, fall: 320 });
     await run.done;
+    if (my !== token) return;
     run = null;
     art.classList.remove("is-cycling");
     schedule();
   };
 
-  pause.hidden = false;
+  dotsBox.hidden = false;
+  markDot();
+  list.addEventListener("click", (e) => {
+    const k = dots.indexOf(e.target.closest(".hero-dot"));
+    if (k >= 0) show(k);
+  });
   pause.addEventListener("click", () => {
     const paused = pause.getAttribute("aria-pressed") !== "true";
     pause.setAttribute("aria-pressed", String(paused));
     pause.setAttribute("aria-label", paused ? "Play the widgets" : "Pause the widgets");
     schedule();
   });
-  art.addEventListener("pointerenter", (e) => { if (e.pointerType === "mouse") { hover = true; schedule(); } });
-  art.addEventListener("pointerleave", () => { hover = false; schedule(); });
+  // Under the pointer, only the card pauses the cycle: the dots below stay free to use.
+  const card = art.querySelector(".readme");
+  card.addEventListener("pointerenter", (e) => { if (e.pointerType === "mouse") { hover = true; schedule(); } });
+  card.addEventListener("pointerleave", () => { hover = false; schedule(); });
   new IntersectionObserver((entries) => { inView = entries.some((e) => e.isIntersecting); schedule(); }, { threshold: 0.3 }).observe(art);
   document.addEventListener("visibilitychange", schedule);
   // A resize moves the slots under the canvas: the build ends and the GIFs show.

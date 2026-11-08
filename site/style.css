@@ -196,7 +196,19 @@ h3 { font-size: 22px; line-height: 1.25; letter-spacing: -0.02em; }
 .slot-full { position: absolute; inset: 0; }
 .slot.is-off { visibility: hidden; }
 .hero-art.is-cycling .hero-fx { display: block; }
-.hero-pause { display: grid; place-items: center; width: 28px; height: 28px; margin-left: auto; margin-right: calc(var(--s-8) * -1); padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--gh-faint); cursor: pointer; transition: color 160ms ease, background-color 160ms ease; }
+.hero-dots { display: flex; justify-content: center; align-items: center; gap: var(--s-12); margin-top: var(--s-16); }
+.hero-dots[hidden] { display: none; }
+.hero-dot-list { display: flex; align-items: center; gap: var(--s-8); }
+/* Square pixels; the current set is a bar that fills step by step until the next one. */
+.hero-dot { position: relative; width: 6px; height: 6px; padding: 0; border: 0; border-radius: 0; background: rgba(255, 255, 255, 0.22); cursor: pointer; transition: width 200ms var(--ease), background-color 160ms ease; }
+.hero-dot::before { content: ""; position: absolute; inset: -9px -4px; }
+.hero-dot:hover { background: rgba(255, 255, 255, 0.45); }
+.hero-dot.is-on { width: 30px; background: rgba(255, 255, 255, 0.22); }
+.hero-dot.is-on::after { content: ""; position: absolute; inset: 0; background: var(--text); transform-origin: left; transform: scaleX(0); }
+.hero-dot.is-on.is-running::after { animation: dot-fill var(--hero-every, 4000ms) steps(15, end) forwards; }
+.hero-dots.is-paused .hero-dot::after { animation-play-state: paused; }
+@keyframes dot-fill { to { transform: scaleX(1); } }
+.hero-pause { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--faint); cursor: pointer; transition: color 160ms ease, background-color 160ms ease; }
 .hero-pause:hover { color: var(--gh-text); background: rgba(255, 255, 255, 0.06); }
 .hero-pause svg { width: 12px; height: 12px; fill: currentColor; }
 .hero-pause .i-play, .hero-pause[aria-pressed="true"] .i-pause { display: none; }

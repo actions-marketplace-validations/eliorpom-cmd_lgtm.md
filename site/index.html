@@ -78,12 +78,11 @@
         </div>
       </div>
     </div>
-    <figure class="hero-art" role="img" aria-label="A GitHub README with LGTM.md widgets that change every few seconds: a grass field, a campfire, an odometer, a forest, fireworks and more">
-      <div class="readme">
+    <figure class="hero-art">
+      <div class="readme" role="img" aria-label="A GitHub README with LGTM.md widgets that change every few seconds: a grass field, a campfire, an odometer, a forest, fireworks and more">
         <div class="md-head">
           <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
           <span>your-login / README.md</span>
-          <button class="hero-pause" type="button" aria-label="Pause the widgets" aria-pressed="false" hidden><svg viewBox="0 0 16 16" aria-hidden="true" shape-rendering="crispEdges"><path class="i-pause" d="M4 3h3v10H4zM9 3h3v10H9z"/><path class="i-play" d="M5 3h2v10H5zM7 4h2v8H7zM9 5h2v6H9zM11 7h1v2h-1z"/></svg></button>
         </div>
         <div class="readme-body">
           <div class="slot" style="aspect-ratio: 1600 / 744" data-still="hero/grass.png"><img src="widgets/grass.gif" alt="" width="1600" height="744" fetchpriority="high"></div>
@@ -94,6 +93,10 @@
           </div>
           <p class="readme-sub">Made with <span>LGTM.md</span></p>
         </div>
+      </div>
+      <div class="hero-dots" role="group" aria-label="Widget sets" hidden>
+        <div class="hero-dot-list"></div>
+        <button class="hero-pause" type="button" aria-label="Pause the widgets" aria-pressed="false"><svg viewBox="0 0 16 16" aria-hidden="true" shape-rendering="crispEdges"><path class="i-pause" d="M4 3h3v10H4zM9 3h3v10H9z"/><path class="i-play" d="M5 3h2v10H5zM7 4h2v8H7zM9 5h2v6H9zM11 7h1v2h-1z"/></svg></button>
       </div>
       <canvas class="hero-fx" aria-hidden="true"></canvas>
     </figure>
