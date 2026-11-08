@@ -431,9 +431,9 @@ function buttonFx(el, { margin, duration, init, draw }) {
 }
 
 // Hover: the 4 px pixels under the pointer light up in three rings and follow it. White buttons
-// get a deep green multiplied over them (the label stays black); dark ones the bright green.
+// get the full green multiplied over them (the label stays black); dark ones a fainter bright green.
 const SPOT = {
-  light: { color: "#1a7f37", alphas: [0.22, 0.42, 0.68], blend: "multiply" },
+  light: { color: "#2ea043", alphas: [0.3, 0.6, 1], blend: "multiply" },
   dark: { color: "#39d353", alphas: [0.1, 0.2, 0.34], blend: "" },
 };
 const isLightButton = (el) => {
