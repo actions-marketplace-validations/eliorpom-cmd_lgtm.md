@@ -1286,10 +1286,10 @@ async function heroIntro() {
 }
 
 // Hero: after the intro, the README card shows other widgets every few seconds, each set
-// rebuilding from its pixels. The top slot takes a wide widget; the second row two small ones or
+// rebuilding from its pixels (about 1 s). The top slot takes a wide widget; the second row two small ones or
 // one wide one. Pauses off screen, in a hidden tab, under the pointer or focus, and with the
 // pause button; never runs with reduced motion (the intro does not run then either).
-const HERO_EVERY = 4500;
+const HERO_EVERY = 1800;
 const HERO_SETS = [
   { top: "grass", pair: ["flame", "counter"] },
   { top: "forest", full: "ecg" },
@@ -1353,7 +1353,7 @@ function heroCycle() {
       const cell = still.width / Math.max(8, r.width / 12);
       return {
         rect: [r.left - box.left, r.top - box.top, r.width, r.height],
-        still, start: k * 140, cell, sharpen: [cell / 2, cell / 4].filter((v) => v >= 1),
+        still, start: k * 100, cell, sharpen: [cell / 2, cell / 4].filter((v) => v >= 1),
         ready: () => gifReady(gif),
         onLive: () => {
           j.slot.querySelector("img").src = gif.src;
@@ -1362,7 +1362,7 @@ function heroCycle() {
           else if (j.slot !== top && ++pairLive === 1) { full.hidden = true; full.classList.remove("is-off"); }
         },
       };
-    }), { rows: 380, jitter: 100, fall: 320 });
+    }), { rows: 300, jitter: 80, fall: 260 });
     await run.done;
     run = null;
     art.classList.remove("is-cycling");
