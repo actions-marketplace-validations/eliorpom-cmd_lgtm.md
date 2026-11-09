@@ -380,41 +380,158 @@ async function copy(text, button) {
   if (!button.dataset.label) button.dataset.label = button.innerHTML;
   button.innerHTML = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Copied';
   button.classList.add("is-done");
-  pixelBurst(button);
   clearTimeout(button.timer);
   button.timer = setTimeout(() => { button.innerHTML = button.dataset.label; button.classList.remove("is-done"); }, 1600);
   toast.live("Copied");
 }
-// A short burst of square pixels around a button that just copied. Inside the open dialog, so it
-// shows above the page's modal layer; skipped with reduced motion.
-function pixelBurst(el) {
-  if (reducedMotion() || !el.animate) return;
+// Pixel effects on the pill buttons: a pixel spotlight that follows the mouse over one, and a burst of
+// square pixels from the point clicked. Both draw on a canvas laid over the button for the length
+// of the effect; skipped with reduced motion.
+const FX_GREENS = ["#0e4429", "#006d32", "#26a641", "#39d353"];
+const snapPx = (v) => Math.round(v / 2) * 2;
+
+// A canvas laid over a button plus a margin. Inside the open dialog it goes in the dialog (the
+// page behind sits below its top layer), positioned against it, as the dialog's opening transform
+// makes it the reference box. begin() clears it and puts the origin on the button's top left.
+function fxCanvas(el, margin) {
   const host = el.closest("dialog") || document.body;
-  const r = el.getBoundingClientRect(), h = host.getBoundingClientRect();
-  const layer = document.createElement("div");
-  layer.className = "burst";
-  layer.setAttribute("aria-hidden", "true");
-  // Fixed in the page, absolute in a dialog (a transformed or top-layer box is the reference).
   const inDialog = host !== document.body;
-  layer.style.left = `${r.left + r.width / 2 - (inDialog ? h.left : 0)}px`;
-  layer.style.top = `${r.top + r.height / 2 - (inDialog ? h.top : 0)}px`;
-  layer.style.position = inDialog ? "absolute" : "fixed";
+  const r = el.getBoundingClientRect(), h = host.getBoundingClientRect();
+  const W = r.width + margin * 2, H = r.height + margin * 2, dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const c = document.createElement("canvas");
+  c.className = "btn-fx";
+  c.setAttribute("aria-hidden", "true");
+  c.width = Math.round(W * dpr);
+  c.height = Math.round(H * dpr);
+  Object.assign(c.style, {
+    position: inDialog ? "absolute" : "fixed",
+    left: `${r.left - margin - (inDialog ? h.left : 0)}px`, top: `${r.top - margin - (inDialog ? h.top : 0)}px`,
+    width: `${W}px`, height: `${H}px`,
+  });
+  host.appendChild(c);
+  const ctx = c.getContext("2d");
+  return { c, ctx, r, w: r.width, h: r.height,
+    begin() { ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H); ctx.translate(margin, margin); ctx.globalAlpha = 1; } };
+}
+
+function buttonFx(el, { margin, duration, init, draw }) {
+  if (reducedMotion() || !el.getBoundingClientRect().width) return;
+  const o = fxCanvas(el, margin);
+  const box = { w: o.w, h: o.h };
+  const state = init(box);
+  const t0 = performance.now();
+  const frame = (now) => {
+    const t = now - t0;
+    o.begin();
+    if (t >= duration) return o.c.remove();
+    draw(o.ctx, t, box, state);
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+}
+
+// Hover: the 4 px pixels under the pointer light up in three rings and follow it. White buttons
+// get the full green multiplied over them (the label stays black); dark ones a fainter bright green.
+const SPOT = {
+  light: { color: "#2ea043", alphas: [0.3, 0.6, 1], blend: "multiply" },
+  dark: { color: "#39d353", alphas: [0.1, 0.2, 0.34], blend: "" },
+};
+const isLightButton = (el) => {
+  const m = getComputedStyle(el).backgroundColor.match(/[\d.]+/g);
+  if (!m || (m.length > 3 && Number(m[3]) < 0.5)) return false;
+  return (0.299 * m[0] + 0.587 * m[1] + 0.114 * m[2]) / 255 > 0.6;
+};
+let spot = null;
+function startSpot(el, e) {
+  endSpot(true);
+  if (reducedMotion() || !el.getBoundingClientRect().width) return;
+  const o = fxCanvas(el, 0);
+  const tone = isLightButton(el) ? SPOT.light : SPOT.dark;
+  o.c.style.mixBlendMode = tone.blend;
+  const s = { el, o, x: e.clientX - o.r.left, y: e.clientY - o.r.top, fade: 1, leaving: false, raf: 0 };
+  const frame = () => {
+    o.begin();
+    const g = o.ctx;
+    g.beginPath();
+    g.roundRect(0, 0, o.w, o.h, o.h / 2);
+    g.clip();
+    g.fillStyle = tone.color;
+    for (let x = 0; x < o.w; x += 4) for (let y = 0; y < o.h; y += 4) {
+      const d = Math.hypot(x + 2 - s.x, y + 2 - s.y);
+      const ring = d < 10 ? 2 : d < 20 ? 1 : d < 32 ? 0 : -1;
+      if (ring < 0) continue;
+      g.globalAlpha = tone.alphas[ring] * s.fade;
+      g.fillRect(x, y, 4, 4);
+    }
+    // On leaving, it goes out in three steps.
+    if (s.leaving && (s.fade -= 0.34) <= 0) return endSpot(true);
+    s.raf = requestAnimationFrame(frame);
+  };
+  s.raf = requestAnimationFrame(frame);
+  spot = s;
+}
+function endSpot(now) {
+  if (!spot) return;
+  if (!now) { spot.leaving = true; return; }
+  cancelAnimationFrame(spot.raf);
+  spot.o.c.remove();
+  spot = null;
+}
+
+// Click: 16 pixels leave the point clicked (the middle for a keyboard press) in stepped motion.
+function clickBurst(el, e) {
+  const r = el.getBoundingClientRect();
+  const pointer = e && e.detail > 0 && e.clientX;
+  const duration = 460, steps = 6, life = duration - 60;
   const colors = ["#3fb950", "#3fb950", "#9aa3ad"];
-  for (let i = 0; i < 14; i++) {
-    const s = document.createElement("span");
-    const angle = (i / 14) * Math.PI * 2 + Math.random() * 0.4;
-    const dist = r.width / 2 + 10 + Math.random() * 18;
-    const dx = Math.round(Math.cos(angle) * dist / 2) * 2, dy = Math.round(Math.sin(angle) * (r.height / 2 + 10 + Math.random() * 14) / 2) * 2;
-    s.style.background = colors[i % colors.length];
-    layer.appendChild(s);
-    s.animate([
-      // Start on the button's edge, so the pixels leave it rather than cover the label.
-      { transform: `translate(calc(-50% + ${Math.round(dx * 0.55)}px), calc(-50% + ${Math.round(dy * 0.55)}px)) scale(1)`, opacity: 1 },
-      { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(0.5)`, opacity: 0 },
-    ], { duration: 420, easing: "steps(5, end)", fill: "forwards" });
-  }
-  host.appendChild(layer);
-  setTimeout(() => layer.remove(), 480);
+  buttonFx(el, { margin: 70, duration,
+    init: ({ w, h }) => {
+      const ox = pointer ? e.clientX - r.left : w / 2, oy = pointer ? e.clientY - r.top : h / 2;
+      return Array.from({ length: 16 }, (_, i) => {
+        const a = (i / 16) * Math.PI * 2 + Math.random() * 0.5;
+        const dist = 26 + Math.random() * 20;
+        return { ox, oy, ex: ox + Math.cos(a) * dist, ey: oy + Math.sin(a) * dist * 0.8, c: colors[i % colors.length] };
+      });
+    },
+    draw: (ctx, t, box, ps) => {
+      const q = Math.floor((t / life) * steps) / steps;
+      if (q >= 1) return;
+      const ease = 1 - Math.pow(1 - q, 2);
+      ctx.globalAlpha = 1 - q * 0.9;
+      for (const p of ps) {
+        ctx.fillStyle = p.c;
+        ctx.fillRect(snapPx(p.ox + (p.ex - p.ox) * ease - 2), snapPx(p.oy + (p.ey - p.oy) * ease - 2), 4, 4);
+      }
+    } });
+}
+
+// Get started and Add to your README (they open the setup), Copy, and Create the workflow.
+const BURST_BUTTONS = "[data-open], .copy, #create";
+
+function buttonEffects() {
+  const usable = (b) => b && !b.disabled && b.getAttribute("aria-disabled") !== "true";
+  document.addEventListener("pointerover", (e) => {
+    if (e.pointerType !== "mouse") return;
+    const b = e.target.closest(".pill-btn");
+    // Only on entering the button, not when moving between its children.
+    if (!usable(b) || b.contains(e.relatedTarget)) return;
+    startSpot(b, e);
+  });
+  document.addEventListener("pointermove", (e) => {
+    if (spot && !spot.leaving && e.target.closest(".pill-btn") === spot.el) { spot.x = e.clientX - spot.o.r.left; spot.y = e.clientY - spot.o.r.top; }
+  });
+  document.addEventListener("pointerout", (e) => {
+    if (spot && e.target.closest(".pill-btn") === spot.el && !spot.el.contains(e.relatedTarget)) endSpot(false);
+  });
+  // The canvas does not follow the page: a scroll or a resize ends it at once.
+  addEventListener("scroll", () => endSpot(true), { capture: true, passive: true });
+  addEventListener("resize", () => endSpot(true));
+  // The burst rewards the clicks that get something done; Continue, Back, Select all and the like
+  // would replay it on every step and tire the eye.
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest(".pill-btn");
+    if (usable(b) && b.matches(BURST_BUTTONS)) clickBurst(b, e);
+  });
 }
 
 // Screen readers hear it through a live region inside the dialog: the page behind a modal is inert.
@@ -1016,8 +1133,8 @@ function loadImage(src) {
 // The still reduced so one pixel stands for k×k of its pixels (averaged by the browser).
 function mosaic(img, k) {
   const c = document.createElement("canvas");
-  c.width = Math.max(1, Math.round(img.naturalWidth / k));
-  c.height = Math.max(1, Math.round(img.naturalHeight / k));
+  c.width = Math.max(1, Math.round((img.naturalWidth || img.width) / k));
+  c.height = Math.max(1, Math.round((img.naturalHeight || img.height) / k));
   const g = c.getContext("2d", { willReadFrequently: true });
   g.imageSmoothingEnabled = true;
   g.imageSmoothingQuality = "high";
@@ -1143,6 +1260,7 @@ async function heroIntro() {
     for (const s of slots) s.classList.add("is-live");
     root.classList.remove("hero-intro");
     window.removeEventListener("resize", finish);
+    heroCycle();
   };
   if (document.hidden || window.scrollY > art.offsetTop) return finish();
   window.addEventListener("resize", finish);
@@ -1167,70 +1285,150 @@ async function heroIntro() {
   run.done.then(finish);
 }
 
-// Gallery: a card's thumbnail assembles from its pixels the first time it scrolls into view.
-// Cards that enter together are staggered; at most CARD_MAX builds run at once, the rest wait.
-const CARD_GAP = 110;
-const CARD_MAX = 4;
-function galleryIntro() {
-  if (reducedMotion() || !("IntersectionObserver" in window)) return;
-  const cards = $$(".card");
-  for (const c of cards) c.classList.add("is-assembling");
-  const show = (card) => { card.classList.remove("is-assembling"); galleryMotion.built?.(card); };
-  const runs = new Set();
-  const queue = [];
-  let lastStart = 0;
+// Hero: after the intro, the README card shows other widgets every few seconds, each set
+// rebuilding from its pixels. The top slot takes a wide widget; the second row two small ones or
+// one wide one. Dots under the card show the sets and how long until the next one. Pauses off
+// screen, in a hidden tab, with the pointer on the card and with the pause button; never runs
+// with reduced motion (the intro does not run then either).
+const HERO_EVERY = 4000;
+const HERO_SETS = [
+  { top: "grass", pair: ["flame", "counter"] },
+  { top: "forest", full: "ecg" },
+  { top: "fireworks", pair: ["median", "donut"] },
+  { top: "cherry-tree", full: "records" },
+  { top: "hourglass", full: "departures" },
+  { top: "duel", pair: ["flame", "counter"] },
+  { top: "fireworks-commits", pair: ["median", "donut"] },
+];
+function heroCycle() {
+  const art = $(".hero-art");
+  if (!art || reducedMotion() || heroCycle.on) return;
+  heroCycle.on = true;
+  const canvas = art.querySelector(".hero-fx");
+  const top = art.querySelector(".readme-body > .slot");
+  const [left, right] = art.querySelectorAll(".slot-row > .slot:not(.slot-full)");
+  const full = art.querySelector(".slot-full");
+  const dotsBox = art.querySelector(".hero-dots");
+  const pause = art.querySelector(".hero-pause");
+  let i = 0, timer = 0, run = null, inView = true, hover = false, token = 0;
+  // Time already shown of the current set, so a pause resumes where the bar stopped.
+  let elapsed = 0, startedAt = 0;
+  const fileOf = (id) => { const w = BY_ID.get(id); return w.file || w.id; };
+  const nameOf = (id) => BY_ID.get(id).name;
 
-  const startCard = async (card) => {
-    const w = BY_ID.get(card.dataset.id);
-    const media = card.querySelector(".card-media");
-    const img = media.querySelector(".card-still");
-    let still;
-    try {
-      still = await Promise.race([loadImage(`stills/${w.file || w.id}.webp`), new Promise((_, r) => setTimeout(r, 1500))]);
-    } catch { return show(card); }
-    if (!card.classList.contains("is-assembling") || card.hidden) return show(card);
-    // The GIF is contained in its box: the build covers exactly the drawn image.
-    const m = media.getBoundingClientRect(), b = img.getBoundingClientRect();
-    if (!m.width || !b.width) return show(card);
-    const scale = Math.min(b.width / w.w, b.height / w.h);
-    const dw = w.w * scale, dh = w.h * scale;
-    const canvas = document.createElement("canvas");
-    canvas.className = "card-fx";
-    canvas.setAttribute("aria-hidden", "true");
-    media.appendChild(canvas);
-    // Blocks of about 6 CSS pixels, whatever the card width.
-    const cell = still.naturalWidth / Math.max(8, dw / 6);
-    const now = performance.now();
-    const delay = Math.max(0, lastStart + CARD_GAP - now);
-    lastStart = now + delay;
-    const run = pixelBuild(canvas, [{
-      rect: [b.left - m.left + (b.width - dw) / 2, b.top - m.top + (b.height - dh) / 2, dw, dh],
-      still, start: delay, cell, sharpen: [cell / 2, cell / 4].filter((k) => k >= 1),
-      ready: () => gifReady(img), onLive: () => show(card),
-    }], { rows: 420, jitter: 120, fall: 360 });
-    runs.add(run);
-    await run.done;
-    runs.delete(run);
-    canvas.remove();
-    if (queue.length) startCard(queue.shift());
+  // One pixel per set under the card; the current one fills until the next set.
+  dotsBox.style.setProperty("--hero-every", `${HERO_EVERY}ms`);
+  const list = dotsBox.querySelector(".hero-dot-list");
+  list.innerHTML = HERO_SETS.map((set, k) => {
+    const names = [set.top, ...(set.full ? [set.full] : set.pair)].map(nameOf).join(", ");
+    return `<button class="hero-dot" type="button" aria-label="Show ${esc(names)}"></button>`;
+  }).join("");
+  const dots = [...list.children];
+  const markDot = () => dots.forEach((d, k) => {
+    d.classList.toggle("is-on", k === i);
+    d.classList.remove("is-running");
+    if (k === i) d.setAttribute("aria-current", "true"); else d.removeAttribute("aria-current");
+  });
+
+  // The still drawn into the slot's shape on the widgets' background, as the GIF will show.
+  const fitted = (img, rect) => {
+    const R = rect.width / rect.height, iw = img.naturalWidth, ih = img.naturalHeight;
+    const c = document.createElement("canvas");
+    c.width = Math.round(iw / ih > R ? iw : ih * R);
+    c.height = Math.round(iw / ih > R ? iw / R : ih);
+    const g = c.getContext("2d");
+    g.fillStyle = "#0d1117";
+    g.fillRect(0, 0, c.width, c.height);
+    g.drawImage(img, (c.width - iw) / 2, (c.height - ih) / 2);
+    return c;
   };
 
-  const io = new IntersectionObserver((entries) => {
-    for (const e of entries) {
-      if (!e.isIntersecting) continue;
-      io.unobserve(e.target);
-      if (runs.size < CARD_MAX) startCard(e.target); else queue.push(e.target);
+  const schedule = () => {
+    clearTimeout(timer);
+    const blocked = pause.getAttribute("aria-pressed") === "true" || hover || !inView || document.hidden;
+    dotsBox.classList.toggle("is-paused", blocked);
+    if (run) return;
+    if (blocked) {
+      if (startedAt) { elapsed += performance.now() - startedAt; startedAt = 0; }
+      return;
     }
-  }, { threshold: 0.35 });
-  for (const c of cards) io.observe(c);
-  // A resize or a filter change ends every build: the GIFs show as they are.
-  const stopAll = () => { for (const r of runs) r.stop(); };
-  window.addEventListener("resize", stopAll);
-  $("#filters").addEventListener("click", () => {
-    stopAll();
-    for (const c of queue) show(c);
-    queue.length = 0;
+    const dot = dots[i];
+    if (!dot.classList.contains("is-running")) { void dot.offsetWidth; dot.classList.add("is-running"); }
+    startedAt = performance.now();
+    timer = setTimeout(() => show((i + 1) % HERO_SETS.length), Math.max(0, HERO_EVERY - elapsed));
+  };
+
+  // A dot clicked during a build ends it: the latest call wins (token).
+  const show = async (k) => {
+    if (k === i && !run) return;
+    const my = ++token;
+    run?.stop();
+    clearTimeout(timer);
+    i = k;
+    elapsed = 0;
+    startedAt = 0;
+    markDot();
+    const set = HERO_SETS[i];
+    const jobs = [{ slot: top, id: set.top }];
+    if (set.full) jobs.push({ slot: full, id: set.full });
+    else jobs.push({ slot: left, id: set.pair[0] }, { slot: right, id: set.pair[1] });
+    run = { stop() {} };
+    let stills;
+    try {
+      stills = await Promise.race([Promise.all(jobs.map((j) => loadImage(`stills/${fileOf(j.id)}.webp`))), new Promise((_, r) => setTimeout(r, 2000))]);
+    } catch { if (my === token) { run = null; schedule(); } return; }
+    if (my !== token) return;
+    // The wide slot must be in the layout to be measured; it stays invisible until it is live.
+    if (set.full && full.hidden) { full.classList.add("is-off"); full.hidden = false; }
+    art.classList.add("is-cycling");
+    const box = canvas.getBoundingClientRect();
+    let pairLive = 0;
+    run = pixelBuild(canvas, jobs.map((j, n) => {
+      const r = j.slot.getBoundingClientRect();
+      const gif = new Image();
+      gif.src = `widgets/${fileOf(j.id)}.gif`;
+      const still = fitted(stills[n], r);
+      const cell = still.width / Math.max(8, r.width / 12);
+      return {
+        rect: [r.left - box.left, r.top - box.top, r.width, r.height],
+        still, start: n * 140, cell, sharpen: [cell / 2, cell / 4].filter((v) => v >= 1),
+        ready: () => gifReady(gif),
+        onLive: () => {
+          j.slot.querySelector("img").src = gif.src;
+          j.slot.classList.remove("is-off");
+          if (j.slot === full) { left.classList.add("is-off"); right.classList.add("is-off"); }
+          else if (j.slot !== top && ++pairLive === 1) { full.hidden = true; full.classList.remove("is-off"); }
+        },
+      };
+    }), { rows: 380, jitter: 100, fall: 320 });
+    await run.done;
+    if (my !== token) return;
+    run = null;
+    art.classList.remove("is-cycling");
+    schedule();
+  };
+
+  dotsBox.hidden = false;
+  markDot();
+  list.addEventListener("click", (e) => {
+    const k = dots.indexOf(e.target.closest(".hero-dot"));
+    if (k >= 0) show(k);
   });
+  pause.addEventListener("click", () => {
+    const paused = pause.getAttribute("aria-pressed") !== "true";
+    pause.setAttribute("aria-pressed", String(paused));
+    pause.setAttribute("aria-label", paused ? "Play the widgets" : "Pause the widgets");
+    schedule();
+  });
+  // Under the pointer, only the card pauses the cycle: the dots below stay free to use.
+  const card = art.querySelector(".readme");
+  card.addEventListener("pointerenter", (e) => { if (e.pointerType === "mouse") { hover = true; schedule(); } });
+  card.addEventListener("pointerleave", () => { hover = false; schedule(); });
+  new IntersectionObserver((entries) => { inView = entries.some((e) => e.isIntersecting); schedule(); }, { threshold: 0.3 }).observe(art);
+  document.addEventListener("visibilitychange", schedule);
+  // A resize moves the slots under the canvas: the build ends and the GIFs show.
+  window.addEventListener("resize", () => run?.stop());
+  schedule();
 }
 
 // The gallery shows still images (about 125 KB in all, instead of 10 MB of GIFs). A card plays its
@@ -1255,14 +1453,9 @@ function galleryMotion() {
   grid.addEventListener("focusout", (e) => { const c = e.target.closest(".card"); if (c && !c.contains(e.relatedTarget) && !c.matches(":hover")) pause(c); });
   if (!matchMedia("(hover: none)").matches || reducedMotion() || !("IntersectionObserver" in window)) return;
   const io = new IntersectionObserver((entries) => {
-    for (const e of entries) e.isIntersecting && !e.target.classList.contains("is-assembling") ? play(e.target) : pause(e.target);
+    for (const e of entries) e.isIntersecting ? play(e.target) : pause(e.target);
   }, { threshold: 0.6 });
   for (const c of $$(".card")) io.observe(c);
-  // A card that was still assembling when it came into view starts playing once it is built.
-  galleryMotion.built = (card) => {
-    const r = card.getBoundingClientRect();
-    if (r.left >= 0 && r.right <= innerWidth && r.top < innerHeight && r.bottom > 0) play(card);
-  };
 }
 
 // Pixel marks that build themselves: the 16×16 mark is split into one rect per grid pixel, each
@@ -1292,13 +1485,20 @@ function buildMark(host) {
     svg.dataset.split = "1";
   }
   if (reducedMotion()) return;
+  let last = 0;
   for (const r of svg.querySelectorAll("rect")) {
     const y = Number(r.getAttribute("y"));
-    r.style.setProperty("--d", `${Math.round((15 - y) * 38 + Math.random() * 90)}ms`);
+    const d = Math.round((15 - y) * 38 + Math.random() * 90);
+    last = Math.max(last, d);
+    r.style.setProperty("--d", `${d}ms`);
   }
+  clearTimeout(svg.buildTimer);
   svg.classList.remove("is-building");
   void svg.getBoundingClientRect();
   svg.classList.add("is-building");
+  // Mobile Safari can leave an SVG animation frozen halfway (while scrolling, for one): once the
+  // last pixel is due to have landed, drop the animation so the whole mark shows as it is.
+  svg.buildTimer = setTimeout(() => svg.classList.remove("is-building"), last + 240 + 80);
 }
 
 // The closing band's mark builds once, when the band comes into view.
@@ -1325,9 +1525,9 @@ function init() {
   heroIntro();
 
   renderGallery();
-  galleryIntro();
   galleryMotion();
   closingIntro();
+  buttonEffects();
   renderPicks();
   loadUrl();
   const dialog = $("#setup");

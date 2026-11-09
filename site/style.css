@@ -53,7 +53,8 @@ h3 { font-size: 22px; line-height: 1.25; letter-spacing: -0.02em; }
 
 /* Buttons: one shape (pill), two sizes (44 / 32), two styles (solid / ghost). */
 .pill-btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--s-8); height: 44px; padding: 0 var(--s-24); border: 1px solid var(--text); border-radius: 999px; background: var(--text); color: var(--bg); font: 500 15px/1 var(--sans); text-decoration: none; white-space: nowrap; cursor: pointer; transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, opacity 180ms ease, transform 160ms var(--ease); }
-.pill-btn:hover { opacity: 0.88; }
+/* No dimming on hover: the pixel spotlight (app.js) is the hover state. */
+.pill-btn:hover { opacity: 1; }
 .pill-btn.small { height: 32px; padding: 0 var(--s-12); font-size: 14px; }
 .pill-btn.ghost { background: transparent; border-color: var(--line-2); color: var(--text); }
 .pill-btn.ghost:hover { opacity: 1; border-color: var(--faint); }
@@ -92,8 +93,6 @@ h3 { font-size: 22px; line-height: 1.25; letter-spacing: -0.02em; }
 .card-hit { all: unset; cursor: pointer; }
 .card-hit::after { content: ""; position: absolute; inset: 0; z-index: 2; border-radius: 14px; }
 .card:has(.card-hit:focus-visible) { outline: 2px solid var(--text); outline-offset: 3px; }
-.card-fx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-.card.is-assembling .card-media img { opacity: 0; }
 .card-body { display: flex; flex-direction: column; flex: 1; padding: var(--s-16) var(--s-16) var(--s-16); }
 .card-name { font: 500 18px/1.25 var(--display); letter-spacing: -0.015em; }
 .card-id { margin-top: var(--s-4); font: 400 12px/1.4 var(--mono); color: var(--faint); }
@@ -107,7 +106,8 @@ h3 { font-size: 22px; line-height: 1.25; letter-spacing: -0.02em; }
 .seg button:hover { color: var(--text); }
 .seg button[aria-pressed="true"] { background: var(--text); color: var(--bg); }
 .field { display: grid; gap: var(--s-8); margin-top: var(--s-16); font-size: 14px; }
-.field input { width: 100%; max-width: 340px; height: 44px; padding: 0 var(--s-16); background: var(--panel); border: 1px solid var(--line-2); border-radius: 999px; font: 400 15px/1 var(--sans); color: var(--text); transition: border-color 180ms ease; }
+/* 16 px: below that, iOS Safari zooms the page when the field gets the focus. */
+.field input { width: 100%; max-width: 340px; height: 44px; padding: 0 var(--s-16); background: var(--panel); border: 1px solid var(--line-2); border-radius: 999px; font: 400 16px/1 var(--sans); color: var(--text); transition: border-color 180ms ease; }
 .field input::placeholder { color: var(--faint); }
 .field input:hover, .field input:focus { border-color: var(--faint); outline: none; }
 .field input[aria-invalid="true"] { border-color: var(--red); }
@@ -188,8 +188,31 @@ h3 { font-size: 22px; line-height: 1.25; letter-spacing: -0.02em; }
 .readme .md-head { height: 44px; font-weight: 500; }
 .readme-body { display: grid; gap: var(--s-8); padding: var(--s-16); }
 .slot-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-8); }
-.slot { position: relative; background: #161b22; }
-.slot img { position: absolute; inset: 0; width: 100%; height: 100%; transition: opacity 220ms ease; }
+.slot { position: relative; background: var(--gh-bg); }
+/* Contained, on the widgets' own background: a widget of another shape shows no bars. */
+.slot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; transition: opacity 220ms ease; }
+/* The second row holds two small widgets, or one wide one over both (same height). */
+.slot-row { position: relative; }
+.slot-full { position: absolute; inset: 0; }
+.slot.is-off { visibility: hidden; }
+.hero-art.is-cycling .hero-fx { display: block; }
+.hero-dots { display: flex; justify-content: center; align-items: center; gap: var(--s-12); margin-top: var(--s-16); }
+.hero-dots[hidden] { display: none; }
+.hero-dot-list { display: flex; align-items: center; gap: var(--s-8); }
+/* Square pixels; the current set is a bar that fills step by step until the next one. */
+.hero-dot { position: relative; width: 6px; height: 6px; padding: 0; border: 0; border-radius: 0; background: rgba(255, 255, 255, 0.22); cursor: pointer; transition: width 200ms var(--ease), background-color 160ms ease; }
+.hero-dot::before { content: ""; position: absolute; inset: -9px -4px; }
+.hero-dot:hover { background: rgba(255, 255, 255, 0.45); }
+.hero-dot.is-on { width: 30px; background: rgba(255, 255, 255, 0.22); }
+.hero-dot.is-on::after { content: ""; position: absolute; inset: 0; background: var(--text); transform-origin: left; transform: scaleX(0); }
+.hero-dot.is-on.is-running::after { animation: dot-fill var(--hero-every, 4000ms) steps(15, end) forwards; }
+.hero-dots.is-paused .hero-dot::after { animation-play-state: paused; }
+@keyframes dot-fill { to { transform: scaleX(1); } }
+.hero-pause { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--faint); cursor: pointer; transition: color 160ms ease, background-color 160ms ease; }
+.hero-pause:hover { color: var(--gh-text); background: rgba(255, 255, 255, 0.06); }
+.hero-pause svg { width: 12px; height: 12px; fill: currentColor; }
+.hero-pause .i-play, .hero-pause[aria-pressed="true"] .i-pause { display: none; }
+.hero-pause[aria-pressed="true"] .i-play { display: inline; }
 .hero-intro .slot img { opacity: 0; }
 .slot.is-live img { opacity: 1; }
 .readme-sub { margin-top: var(--s-4); font: 400 12px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif; color: var(--gh-text); }
@@ -427,7 +450,11 @@ html.modal-open { overflow: hidden; }
   .picks { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-8); }
   /* On phones the README sits above the thumbnails as one row. */
   .pick-layout { grid-template-columns: minmax(0, 1fr); gap: var(--s-12); }
-  .picked-count { margin-left: 0; }
+  /* One line on phones: the mode switch on the left, Select all on the right. The count would
+     push Select all to a second line, and the tiles already show what is selected. */
+  .pane-tools { flex-wrap: nowrap; }
+  .picked-count { display: none; }
+  #pick-all { margin-left: auto; flex: none; }
   /* Narrower numbers and a two-column hang leave room for a whole URL on one line. */
   .ln { grid-template-columns: 16px minmax(0, 1fr); column-gap: var(--s-8); padding-right: var(--s-8); }
   .lc { --hang: 2ch; }
@@ -444,8 +471,7 @@ html.modal-open { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
 
 /* Pixel burst on "Copied". */
-.burst { z-index: 40; width: 0; height: 0; pointer-events: none; }
-.burst span { position: absolute; left: 0; top: 0; width: 4px; height: 4px; }
+.btn-fx { z-index: 40; pointer-events: none; }
 
 /* Setup without page scroll: every step fills the fixed frame. Step 1 scrolls its tile grid only;
    steps 2 to 6 fit, with one flexible box (the README) that scales its content to the space left,
@@ -539,7 +565,6 @@ html.modal-open { overflow: hidden; }
   #setup .pane-actions, #setup .run-readme { margin-top: var(--s-12); }
   .run-detail { font-size: 13px; }
 }
-@media (max-width: 380px) { .picked-count { display: none; } }
 /* A friend's login error takes the place of the duel hint. */
 .rival:has(#rival-error:not([hidden])) #rival-help { display: none; }
 @media (max-width: 380px) {
