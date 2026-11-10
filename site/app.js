@@ -585,12 +585,13 @@ async function loadStars() {
   } catch { /* offline or rate-limited */ }
 }
 
-// The setup, one question per screen. The token step exists only for a profile:
+// The setup, one question per screen. The token and secret steps exist only for a profile:
 // a project's own token already reads its private activity.
 const STEPS = [
   { key: "widgets", next: "Continue" },
   { key: "target", next: "Continue" },
-  { key: "token", next: "I added the secret", time: "about 1 min", profileOnly: true },
+  { key: "token", next: "I copied the token", time: "about 1 min", profileOnly: true },
+  { key: "secret", next: "I added the secret", time: "about 30 s", profileOnly: true },
   { key: "workflow", next: "I committed it", time: "about 1 min" },
   { key: "readme", next: "I pasted it" },
   { key: "check" },
@@ -717,6 +718,7 @@ function update() {
   // Steps 3 to 6: links into the visitor's repository.
   const repoUrl = `https://github.com/${t.owner}/${t.repo}`;
   $("#secret-link").href = `${repoUrl}/settings/secrets/actions/new`;
+  $("#tuto-secret-url").textContent = `github.com/${t.owner}/${t.repo}/settings/secrets/actions/new`;
   const yaml = buildYaml();
   const html = buildHtml(t);
   renderCode($("#yaml"), yaml, "yaml");
@@ -767,10 +769,11 @@ function update() {
   $("#cfg-reason").textContent = block;
   $("#cfg-reason").hidden = !block;
   $("#back").hidden = idx === 0;
-  $("#skip-token").hidden = state.step !== "token";
+  $("#skip-token").hidden = state.step !== "token" && state.step !== "secret";
   $("#close-text").hidden = state.step !== "check";
 
   fitAll();
+  tutoSync();
   saveUrl();
 }
 
@@ -1024,7 +1027,125 @@ function markClipped(pre) {
   if (more) more.textContent = `${hidden} more line${hidden > 1 ? "s" : ""}, copied with the rest`;
 }
 
+// Steps 3 and 4: a looping sketch of the GitHub page, a cursor that does what the list says,
+// and the list item being acted out lit up. The stage is drawn at a fixed size and scaled to its box.
+const TUTO_W = 520, TUTO_H = 230;
+
+function fitTuto(box) {
+  // Never taller than the sketch at full width: on a phone the box would otherwise be mostly empty.
+  box.style.maxHeight = `${Math.ceil(box.clientWidth * TUTO_H / TUTO_W)}px`;
+  const W = box.clientWidth, H = box.clientHeight;
+  if (!W || !H) return;
+  const k = Math.min(W / TUTO_W, H / TUTO_H);
+  box.firstElementChild.style.transform = `translate(${(W - TUTO_W * k) / 2}px, ${(H - TUTO_H * k) / 2}px) scale(${k})`;
+}
+
+// Each scene: [time in ms, list item lit from then on, action]. The loop restarts after `length`.
+const TUTO_SCRIPTS = {
+  token: {
+    length: 9000,
+    still: (el) => el.radio("r-all"),
+    steps: [
+      [0, 0, (el) => { el.view("form"); el.scroll(30); el.radio("r-public"); el.tip(false); el.cursor(440, 200, 0); }],
+      [500, 0, (el) => el.cursor(el.at("r-all", 10, 7))],
+      [1500, 0, (el) => { el.click(); el.radio("r-all"); }],
+      [2500, 1, (el) => el.scroll(112)],
+      [3200, 1, (el) => el.cursor(el.at("generate"))],
+      [4100, 1, (el) => { el.click(); el.press("generate"); }],
+      [4600, 1, (el) => { el.view("done"); el.scroll(0); el.cursor(340, 180, 0); }],
+      [5200, 1, (el) => el.cursor(el.at("copy"))],
+      [6100, 1, (el) => { el.click(); el.tip(true); }],
+    ],
+  },
+  secret: {
+    length: 9000,
+    still: (el) => { el.text("name-text", "LGTM_MD_TOKEN"); el.text("value-text", TUTO_PAT); },
+    steps: [
+      [0, 0, (el) => { el.view("form"); el.scroll(28); el.text("name-text", ""); el.text("value-text", ""); el.focus(null); el.cursor(440, 200, 0); }],
+      [500, 0, (el) => el.cursor(el.at("name"))],
+      [1300, 0, (el) => { el.click(); el.focus("name"); el.type("name-text", "LGTM_MD_TOKEN", 55); }],
+      [2500, 1, (el) => el.cursor(el.at("value"))],
+      [3300, 1, (el) => { el.click(); el.focus("value"); }],
+      [3700, 1, (el) => el.text("value-text", TUTO_PAT)],
+      [4400, 2, (el) => { el.focus(null); el.cursor(el.at("add")); }],
+      [5300, 2, (el) => { el.click(); el.press("add"); }],
+      [5800, 2, (el) => { el.view("done"); el.scroll(0); el.cursor(400, 190, 0); }],
+    ],
+  },
+};
+const TUTO_PAT = "github_pat_11ABCDE0Y0a1b2c3d4e5f6g7h8";
+
+const tutoRun = { key: "", timers: [] };
+
+function tutoTools(box) {
+  const stage = box.firstElementChild;
+  const q = (name) => stage.querySelector(`[data-el="${name}"]`);
+  const cur = q("cursor");
+  const later = (fn, ms) => tutoRun.timers.push(setTimeout(fn, ms));
+  return {
+    view: (v) => { for (const x of stage.querySelectorAll(".tg-view")) x.hidden = x.dataset.view !== v; },
+    scroll: (y) => { stage.querySelector(".tg-scroll").style.transform = `translateY(${-y}px)`; },
+    radio: (name) => { for (const r of stage.querySelectorAll(".tg-radio")) r.classList.toggle("on", r.dataset.el === name); },
+    tip: (on) => q("tip")?.classList.toggle("on", on),
+    text: (name, t) => { q(name).textContent = t; },
+    type: (name, t, ms) => { for (let i = 1; i <= t.length; i++) later(() => { q(name).textContent = t.slice(0, i); }, i * ms); },
+    focus: (name) => { for (const x of stage.querySelectorAll(".tg-input")) x.classList.toggle("focus", !!name && x.dataset.el === name); },
+    press: (name) => { const b = q(name); b.classList.add("down"); later(() => b.classList.toggle("down", false), 180); },
+    // The centre of an element in stage coordinates, or a given offset from its top left.
+    at: (name, dx, dy) => {
+      const r = q(name).getBoundingClientRect(), s = stage.getBoundingClientRect();
+      const k = s.width / TUTO_W;
+      return [(r.left - s.left) / k + (dx ?? r.width / k / 2), (r.top - s.top) / k + (dy ?? r.height / k / 2)];
+    },
+    cursor: (x, y, ms = 700) => {
+      if (Array.isArray(x)) [ms, x, y] = [y ?? 700, x[0], x[1]];
+      cur.style.transition = ms ? `transform ${ms}ms cubic-bezier(0.45, 0, 0.2, 1)` : "none";
+      cur.style.transform = `translate(${x}px, ${y}px)`;
+    },
+    click: () => { cur.classList.toggle("click", false); void cur.offsetWidth; cur.classList.toggle("click", true); },
+  };
+}
+
+function lightStep(key, i) {
+  const list = document.querySelector(`[data-tuto-steps="${key}"]`);
+  if (list) [...list.children].forEach((li, n) => li.classList.toggle("on", n === i));
+}
+
+function tutoStop() {
+  for (const t of tutoRun.timers) clearTimeout(t);
+  tutoRun.timers = [];
+  tutoRun.key = "";
+}
+
+// Plays the scene of the step on screen, only while the dialog and the tab are visible.
+function tutoSync() {
+  const dialog = $("#setup");
+  const key = dialog?.open && !document.hidden && TUTO_SCRIPTS[state.step] ? state.step : "";
+  if (key === tutoRun.key) return;
+  tutoStop();
+  if (!key) return;
+  const box = document.querySelector(`.tuto[data-tuto="${key}"]`);
+  const script = TUTO_SCRIPTS[key];
+  const el = tutoTools(box);
+  tutoRun.key = key;
+  // Reduced motion: the filled form, no cursor, no lit item.
+  if (reducedMotion()) {
+    script.steps[0][2](el);
+    script.still(el);
+    box.classList.add("still");
+    return;
+  }
+  box.classList.remove("still");
+  const loop = () => {
+    for (const [at, item, fn] of script.steps) tutoRun.timers.push(setTimeout(() => { lightStep(key, item); fn(el); }, at));
+    tutoRun.timers.push(setTimeout(loop, script.length));
+  };
+  // One frame later the step is laid out, so the cursor can measure its targets.
+  requestAnimationFrame(() => { if (tutoRun.key === key) { fitTuto(box); loop(); } });
+}
+
 function fitAll() {
+  for (const box of $$("#setup .tuto")) fitTuto(box);
   for (const fit of $$("#setup .fit")) fitReadme(fit);
   for (const pre of $$("#setup .gh-code")) markClipped(pre);
 }
@@ -1294,7 +1415,7 @@ async function heroIntro() {
   const art = $(".hero-art");
   if (!art || !root.classList.contains("hero-intro")) return;
   const canvas = art.querySelector(".hero-fx");
-  const slots = [...art.querySelectorAll(".slot")];
+  const slots = [...art.querySelectorAll(".slot[data-still]")];
   let run = null, over = false;
   const finish = () => {
     if (over) return;
@@ -1602,6 +1723,8 @@ function init() {
       for (const card of $$(".card")) card.hidden = c !== "All" && card.dataset.cat !== c;
       return;
     }
+    const nameBtn = e.target.closest("[data-copy-text]");
+    if (nameBtn) return copy(nameBtn.dataset.copyText, nameBtn);
     const copyBtn = e.target.closest(".copy");
     if (copyBtn && !copyBtn.disabled) return copy(activeWidgets().length ? $("#" + copyBtn.dataset.copy).dataset.raw : "", copyBtn);
     if (e.target.closest("#pick-all")) {
@@ -1615,11 +1738,13 @@ function init() {
       return state.step === visibleSteps().at(-1).key ? dialog.close() : move(1);
     }
     if (e.target.closest("#back")) return move(-1);
-    if (e.target.closest("#skip-token")) return move(1);
+    if (e.target.closest("#skip-token")) return goTo("workflow");
   });
   // A click on the dimmed backdrop lands on the dialog itself, outside its content.
   dialog.addEventListener("click", (e) => { if (e.target === dialog) dialog.close(); });
   dialog.addEventListener("close", onClose);
+  dialog.addEventListener("close", tutoSync);
+  document.addEventListener("visibilitychange", tutoSync);
   // Boxes refit when the dialog changes size or a step shows them.
   if ("ResizeObserver" in window) {
     const ro = new ResizeObserver(() => fitAll());

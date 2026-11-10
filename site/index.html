@@ -191,26 +191,95 @@
       <section class="pane" data-pane="token" aria-labelledby="pane-token" hidden>
         <h3 class="pane-title" id="pane-token" tabindex="-1">Create a read-only token</h3>
         <p class="pane-help">It lets the widgets count your private activity. It can only read, and it never expires.</p>
-        <a class="pill-btn wide" id="token-link" href="https://github.com/settings/personal-access-tokens/new?name=LGTM.md&amp;description=Read-only+token+for+LGTM.md&amp;expires_in=none&amp;contents=read&amp;pull_requests=read" target="_blank" rel="noopener">Open the token form ↗</a>
-        <ol class="token-steps">
-          <li>Under <b>Repository access</b>, choose <b>All repositories</b>.</li>
-          <li>Click <b>Generate token</b> and copy it.</li>
-          <li>Open the <a id="secret-link" href="#" target="_blank" rel="noopener">secrets of your profile repository</a> and add one named <code>LGTM_MD_TOKEN</code>, with the token as its value.</li>
-        </ol>
-        <details class="more">
-          <summary>What the token can read</summary>
-          <div class="more-body">
-            <p>The form creates a fine-grained token with read-only access to <b>Contents</b> and <b>Pull requests</b> on <b>All repositories</b>. GitHub adds read-only <b>Metadata</b> on its own.</p>
-            <p>The Action uses it to read:</p>
-            <ul>
-              <li>your contribution calendar</li>
-              <li>the commit history of your repositories, to count commits per language</li>
-              <li>your merged pull requests</li>
-              <li>the languages of your repositories</li>
-            </ul>
-            <p>It can't push, open issues or change settings. The GIFs are committed by the workflow's own <code>GITHUB_TOKEN</code>.</p>
+        <div class="tuto" data-tuto="token" aria-hidden="true">
+          <div class="tuto-stage">
+            <div class="tg-bar"><span class="tg-dot"></span><span class="tg-dot"></span><span class="tg-dot"></span><span class="tg-url">github.com/settings/personal-access-tokens/new</span></div>
+            <div class="tg-page">
+              <div class="tg-scroll" data-el="scroll">
+                <div class="tg-view" data-view="form">
+                  <p class="tg-crumb">Fine-grained tokens / New</p>
+                  <p class="tg-h">New fine-grained personal access token</p>
+                  <div class="tg-row"><span class="tg-label">Token name</span><span class="tg-input">LGTM.md</span></div>
+                  <div class="tg-row"><span class="tg-label">Expiration</span><span class="tg-input tg-select">No expiration</span></div>
+                  <p class="tg-label tg-section">Repository access</p>
+                  <div class="tg-radios">
+                    <span class="tg-radio" data-el="r-public"><i></i>Public repositories</span>
+                    <span class="tg-radio" data-el="r-all"><i></i>All repositories</span>
+                    <span class="tg-radio"><i></i>Only select repositories</span>
+                  </div>
+                  <p class="tg-label tg-section">Permissions</p>
+                  <p class="tg-perm">Contents <em>Read-only</em> · Pull requests <em>Read-only</em> · Metadata <em>Read-only</em></p>
+                  <span class="tg-btn tg-green" data-el="generate">Generate token</span>
+                </div>
+                <div class="tg-view" data-view="done">
+                  <p class="tg-h">Fine-grained personal access tokens</p>
+                  <p class="tg-note">Make sure to copy your token now. You won’t be able to see it again!</p>
+                  <div class="tg-token"><span>github_pat_11ABCDE0Y0a1b2c3d4e5f6g7h8</span><span class="tg-copy" data-el="copy"><svg viewBox="0 0 16 16"><rect x="5" y="5" width="8" height="9" rx="1.5"/><path d="M3 11V3.5A1.5 1.5 0 0 1 4.5 2H10"/></svg></span><span class="tg-tip" data-el="tip">Copied!</span></div>
+                </div>
+              </div>
+            </div>
+            <svg class="tg-cursor" data-el="cursor" viewBox="0 0 16 22"><path d="M1 1v17l4.5-4.2 3 6.7 2.6-1.2-3-6.6H14z"/></svg>
           </div>
-        </details>
+        </div>
+        <ol class="token-steps tuto-steps" data-tuto-steps="token">
+          <li>Under <b>Repository access</b>, choose <b>All repositories</b>.</li>
+          <li>Click <b>Generate token</b>, then copy it. GitHub shows it only once.</li>
+        </ol>
+        <div class="tuto-actions">
+          <a class="pill-btn" id="token-link" href="https://github.com/settings/personal-access-tokens/new?name=LGTM.md&amp;description=Read-only+token+for+LGTM.md&amp;expires_in=none&amp;contents=read&amp;pull_requests=read" target="_blank" rel="noopener">Open the token form ↗</a>
+          <details class="more more-quiet">
+            <summary>What the token can read</summary>
+            <div class="more-body">
+              <p>The form creates a fine-grained token with read-only access to <b>Contents</b> and <b>Pull requests</b> on <b>All repositories</b>. GitHub adds read-only <b>Metadata</b> on its own.</p>
+              <p>The Action uses it to read:</p>
+              <ul>
+                <li>your contribution calendar</li>
+                <li>the commit history of your repositories, to count commits per language</li>
+                <li>your merged pull requests</li>
+                <li>the languages of your repositories</li>
+              </ul>
+              <p>It can't push, open issues or change settings. The GIFs are committed by the workflow's own <code>GITHUB_TOKEN</code>.</p>
+            </div>
+          </details>
+        </div>
+      </section>
+
+      <section class="pane" data-pane="secret" aria-labelledby="pane-secret" hidden>
+        <h3 class="pane-title" id="pane-secret" tabindex="-1">Save the token as a secret</h3>
+        <p class="pane-help">GitHub keeps it encrypted in your profile repository. Only the workflow can read it.</p>
+        <div class="tuto" data-tuto="secret" aria-hidden="true">
+          <div class="tuto-stage">
+            <div class="tg-bar"><span class="tg-dot"></span><span class="tg-dot"></span><span class="tg-dot"></span><span class="tg-url" id="tuto-secret-url">github.com/your-login/your-login/settings/secrets/actions/new</span></div>
+            <div class="tg-page">
+              <div class="tg-scroll">
+                <div class="tg-view" data-view="form">
+                  <p class="tg-crumb">Settings / Secrets and variables / Actions</p>
+                  <p class="tg-h">New secret</p>
+                  <p class="tg-label">Name *</p>
+                  <span class="tg-input tg-wide" data-el="name"><span data-el="name-text"></span><b class="tg-caret"></b></span>
+                  <p class="tg-label">Secret *</p>
+                  <span class="tg-input tg-wide tg-area" data-el="value"><span data-el="value-text"></span><b class="tg-caret"></b></span>
+                  <span class="tg-btn tg-green" data-el="add">Add secret</span>
+                </div>
+                <div class="tg-view" data-view="done">
+                  <p class="tg-crumb">Settings / Secrets and variables / Actions</p>
+                  <p class="tg-flash">Repository secret added.</p>
+                  <p class="tg-h">Repository secrets</p>
+                  <div class="tg-list"><span class="tg-lock"><svg viewBox="0 0 16 16"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg>LGTM_MD_TOKEN</span><span class="tg-faint">now</span></div>
+                </div>
+              </div>
+            </div>
+            <svg class="tg-cursor" data-el="cursor" viewBox="0 0 16 22"><path d="M1 1v17l4.5-4.2 3 6.7 2.6-1.2-3-6.6H14z"/></svg>
+          </div>
+        </div>
+        <ol class="token-steps tuto-steps" data-tuto-steps="secret">
+          <li>Name it <code>LGTM_MD_TOKEN</code> <button class="text-btn copy-name" type="button" data-copy-text="LGTM_MD_TOKEN">Copy</button></li>
+          <li>Paste the token as the <b>Secret</b>.</li>
+          <li>Click <b>Add secret</b>.</li>
+        </ol>
+        <div class="tuto-actions">
+          <a class="pill-btn" id="secret-link" href="#" target="_blank" rel="noopener">Open your repository secrets ↗</a>
+        </div>
       </section>
 
       <section class="pane" data-pane="workflow" aria-labelledby="pane-workflow" hidden>

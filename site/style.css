@@ -575,3 +575,62 @@ html.modal-open { overflow: hidden; }
   .nav nav { gap: var(--s-8); }
   .nav .pill-btn.small { padding: 0 var(--s-8); }
 }
+
+/* Steps 3 and 4: a sketch of the GitHub page at a fixed 520×230, scaled to the space left by the step. */
+#setup .pane > .tuto { flex: 1 1 0; min-height: 120px; margin-top: var(--s-16); }
+.tuto { position: relative; overflow: hidden; border-radius: var(--s-12); background: var(--panel-2); border: 1px solid var(--line); }
+.tuto-stage { position: absolute; top: 0; left: 0; width: 520px; height: 230px; transform-origin: 0 0; display: flex; flex-direction: column; background: var(--gh-bg); color: var(--gh-text); font: 400 12px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; border-radius: 10px; overflow: hidden; box-shadow: 0 0 0 1px var(--gh-line); }
+.tg-bar { flex: none; display: flex; align-items: center; gap: 5px; height: 26px; padding: 0 10px; background: #161b22; border-bottom: 1px solid var(--gh-line); }
+.tg-dot { width: 7px; height: 7px; border-radius: 50%; background: #30363d; }
+.tg-url { margin-left: 8px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10.5px; color: var(--gh-faint); }
+.tg-page { position: relative; flex: 1; overflow: hidden; }
+.tg-scroll { padding: 14px 22px; transition: transform 600ms cubic-bezier(0.45, 0, 0.2, 1); }
+.tg-view[hidden] { display: none; }
+.tg-crumb { margin: 0 0 4px; font-size: 10.5px; color: var(--gh-faint); }
+.tg-h { margin: 0 0 12px; font-size: 15px; font-weight: 600; color: var(--gh-text); }
+.tg-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.tg-row .tg-label { width: 76px; margin: 0; }
+.tg-label { margin: 0 0 4px; font-size: 11.5px; font-weight: 600; color: var(--gh-text); }
+.tg-section { margin-top: 12px; }
+.tg-input { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; min-width: 150px; border: 1px solid var(--gh-line); border-radius: 6px; background: #0d1117; color: var(--gh-text); font: 400 11.5px/1 var(--mono); white-space: nowrap; overflow: hidden; }
+.tg-select::after { content: "▾"; margin-left: auto; padding-left: 12px; color: var(--gh-faint); }
+.tg-wide { display: flex; width: 100%; margin-bottom: 10px; }
+.tg-area { height: 44px; align-items: flex-start; padding-top: 6px; }
+.tg-input.focus { border-color: #1f6feb; box-shadow: 0 0 0 2px rgba(31, 111, 235, 0.35); }
+.tg-caret { display: none; width: 1px; height: 13px; margin-left: 1px; background: var(--gh-text); animation: tg-blink 1s steps(1) infinite; }
+.tg-input.focus .tg-caret { display: inline-block; }
+@keyframes tg-blink { 50% { opacity: 0; } }
+.tg-radios { display: grid; gap: 5px; }
+.tg-radio { display: flex; align-items: center; gap: 8px; width: max-content; padding: 2px 6px 2px 2px; border-radius: 6px; transition: background 200ms; }
+.tg-radio i { width: 12px; height: 12px; border-radius: 50%; border: 1px solid #6e7681; transition: border 150ms; }
+.tg-radio.on i { border: 4px solid #1f6feb; }
+.tg-radio[data-el="r-all"].on { background: rgba(31, 111, 235, 0.15); font-weight: 600; }
+.tg-perm { margin: 0 0 14px; font-size: 11px; color: var(--gh-faint); }
+.tg-perm em { font-style: normal; color: var(--gh-text); }
+.tg-btn { display: inline-flex; align-items: center; height: 26px; padding: 0 12px; border-radius: 6px; font-size: 11.5px; font-weight: 600; transition: transform 120ms, filter 120ms; }
+.tg-green { background: #238636; color: #fff; }
+.tg-btn.down { transform: scale(0.95); filter: brightness(1.2); }
+.tg-note { margin: 0 0 8px; padding: 8px 10px; border: 1px solid rgba(56, 139, 253, 0.4); border-radius: 6px; background: rgba(56, 139, 253, 0.1); font-size: 11px; }
+.tg-token { position: relative; display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid rgba(46, 160, 67, 0.4); border-radius: 6px; background: rgba(46, 160, 67, 0.1); font: 400 11px/1 var(--mono); }
+.tg-copy { display: grid; place-items: center; width: 22px; height: 22px; margin-left: auto; border-radius: 5px; color: var(--gh-faint); }
+.tg-copy svg, .tg-lock svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.4; }
+.tg-tip { position: absolute; right: 0; top: -26px; padding: 3px 8px; border-radius: 5px; background: #2ea043; color: #fff; font: 600 10.5px/1.4 var(--sans); opacity: 0; transform: translateY(4px); transition: opacity 160ms, transform 160ms; }
+.tg-tip.on { opacity: 1; transform: none; }
+.tg-flash { margin: 0 0 12px; padding: 8px 10px; border: 1px solid rgba(46, 160, 67, 0.4); border-radius: 6px; background: rgba(46, 160, 67, 0.1); font-size: 11px; }
+.tg-list { display: flex; align-items: center; justify-content: space-between; padding: 9px 12px; border: 1px solid var(--gh-line); border-radius: 6px; font: 600 11.5px/1 var(--mono); animation: tg-row 900ms ease-out; }
+@keyframes tg-row { from { background: rgba(46, 160, 67, 0.25); } }
+.tg-lock { display: flex; align-items: center; gap: 8px; }
+.tg-faint { color: var(--gh-faint); font: 400 11px/1 var(--sans); }
+.tg-cursor { position: absolute; top: 0; left: 0; z-index: 2; width: 16px; height: 22px; fill: #fff; stroke: #000; stroke-width: 1.2; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6)); pointer-events: none; }
+.tg-cursor.click { animation: tg-click 320ms ease-out; }
+@keyframes tg-click { 40% { scale: 0.82; } }
+.tuto.still .tg-cursor { display: none; }
+/* The list item being acted out. */
+.tuto-steps { margin-top: var(--s-16); }
+.tuto-steps li { transition: color 200ms; }
+.tuto-steps li::marker { transition: color 200ms; }
+.tuto-steps li.on, .tuto-steps li.on::marker { color: var(--text); }
+.tuto-steps code { font-size: 13px; }
+.copy-name { margin-left: var(--s-4); font-size: 13px; }
+.tuto-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-8) var(--s-16); margin-top: var(--s-16); }
+#setup .tuto-actions .more { margin: 0; }
