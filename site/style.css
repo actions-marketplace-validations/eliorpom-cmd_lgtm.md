@@ -308,6 +308,9 @@ html.modal-open { overflow: hidden; }
 .repo-note { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-8) var(--s-16); margin-top: var(--s-12); }
 .repo-note .check { margin: 0; }
 .repo-note .text-link { font-size: 14px; }
+.repo-note.is-missing .check { color: var(--red); }
+.repo-note.is-missing .check .icon { display: none; }
+.repo-note .text-link.is-primary { font-weight: 600; }
 .rival { margin-top: var(--s-8); }
 
 /* Steps 3 to 5 */

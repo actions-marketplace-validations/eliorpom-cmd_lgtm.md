@@ -205,6 +205,38 @@ function targetInfo() {
   return { ok: false, owner: "owner", repo: "repo", error: "Write the repository as owner/name, for example octocat/hello-world." };
 }
 
+// Does the profile repository exist? Every link of steps 3 to 6 points into it,
+// so a missing one sends the visitor to a GitHub 404. A profile repository is public,
+// so the anonymous API answers. Only "missing" blocks: a network error or a rate limit lets the visitor through.
+const repoCheck = new Map(); // "owner/repo" (lowercase) -> "checking" | "ok" | "missing" | "unknown"
+let repoTimer = 0;
+
+function repoStatus(t) {
+  if (state.mode !== "profile" || !t.ok) return "ok";
+  return repoCheck.get(`${t.owner}/${t.repo}`.toLowerCase()) || "checking";
+}
+
+function checkRepo(force = false) {
+  const t = targetInfo();
+  if (state.mode !== "profile" || !t.ok) return;
+  const key = `${t.owner}/${t.repo}`.toLowerCase();
+  const known = repoCheck.get(key);
+  if (!force && known) return;
+  // A re-check keeps "missing" on screen until the answer, so the message doesn't blink.
+  if (!known) repoCheck.set(key, "checking");
+  clearTimeout(repoTimer);
+  repoTimer = setTimeout(async () => {
+    let status = "unknown";
+    try {
+      const res = await fetch(`https://api.github.com/repos/${t.owner}/${t.repo}`, { headers: { Accept: "application/vnd.github+json" }, cache: "no-store" });
+      if (res.ok) status = "ok";
+      else if (res.status === 404) status = "missing";
+    } catch { /* offline: don't block */ }
+    repoCheck.set(key, status);
+    update();
+  }, force ? 0 : 400);
+}
+
 // Same workflow as examples/profile-workflow.yml and examples/repo-workflow.yml.
 // A project publishes its GIFs on a separate lgtm-md branch:
 // a nightly commit on the default branch would count as the project's own activity.
@@ -580,6 +612,9 @@ function stepBlock(key) {
   const project = state.mode === "project";
   if (t.error) return project ? "Fix the repository name to continue." : "Fix your login to continue.";
   if (!t.ok) return project ? "Type the repository to continue." : "Type your login to continue.";
+  const repo = repoStatus(t);
+  if (repo === "missing") return "Create your profile repository on GitHub, then come back here.";
+  if (repo === "checking") return "Checking your profile repository…";
   if (duelPending()) return rivalError() ? "Fix your friend’s login to continue." : "Type a friend’s login for the duel, or go back and remove it.";
   return "";
 }
@@ -624,6 +659,7 @@ function renderPicks() {
 }
 
 function update() {
+  checkRepo(); // no-op once this login has an answer
   const t = targetInfo();
   const project = state.mode === "project";
   const pending = duelPending();
@@ -662,6 +698,13 @@ function update() {
   err.hidden = !t.error;
   err.textContent = t.error || "";
   $("#repo-note").hidden = project;
+  const repo = repoStatus(t);
+  const missing = repo === "missing";
+  $("#repo-note").classList.toggle("is-missing", missing);
+  $("#repo-state").textContent = missing
+    ? `No repository named ${t.owner}/${t.repo} yet.`
+    : repo === "ok" && t.ok && !project ? `Found ${t.owner}/${t.repo}` : "Public, and named exactly like your login";
+  $("#repo-create").classList.toggle("is-primary", missing);
   $("#repo-create").href = t.ok && !project
     ? `https://github.com/new?name=${encodeURIComponent(t.owner)}&visibility=public`
     : "https://github.com/new?visibility=public";
@@ -1592,6 +1635,8 @@ function init() {
     if (d.open) fitAll();
   }, true);
   $("#target").addEventListener("input", (e) => { state.target = e.target.value; update(); });
+  // Back from the GitHub tab where the repository was just created.
+  window.addEventListener("focus", () => { if (repoStatus(targetInfo()) === "missing") checkRepo(true); });
   $("#rival").addEventListener("input", (e) => { state.rival = e.target.value; update(); });
   // Enter in a field moves on when the step is valid.
   for (const input of [$("#target"), $("#rival")]) {
