@@ -634,3 +634,10 @@ html.modal-open { overflow: hidden; }
 .copy-name { margin-left: var(--s-4); font-size: 13px; }
 .tuto-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-8) var(--s-16); margin-top: var(--s-16); }
 #setup .tuto-actions .more { margin: 0; }
+
+/* 404: a pixel "404" in grass greens, centred, nothing else. */
+.nf { min-height: calc(100svh - 220px); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding-block: var(--s-64); }
+.nf-art { width: min(264px, 60vw); height: auto; margin-bottom: var(--s-32); }
+.nf h1 { max-width: none; font-size: clamp(32px, 4vw, 48px); line-height: 1.05; }
+.nf p { margin-top: var(--s-12); font-size: 18px; }
+.nf-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--s-16) var(--s-24); margin-top: var(--s-32); }

@@ -6,7 +6,7 @@ set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 out="${1:?usage: site/build.sh <out-dir>}"
 mkdir -p "$out/widgets"
-cp "$root"/site/index.html "$root"/site/compare.html "$root"/site/style.css "$root"/site/app.js "$root"/site/favicon.svg "$root"/site/CNAME "$root"/site/wild.json "$out/"
+cp "$root"/site/index.html "$root"/site/compare.html "$root"/site/404.html "$root"/site/style.css "$root"/site/app.js "$root"/site/favicon.svg "$root"/site/CNAME "$root"/site/wild.json "$out/"
 if [ -f "$root/site/og.png" ]; then cp "$root/site/og.png" "$out/"; fi
 cp "$root"/examples/preview/*.gif "$out/widgets/"
 mkdir -p "$out/hero"
