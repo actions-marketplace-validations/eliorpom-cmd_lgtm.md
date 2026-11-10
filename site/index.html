@@ -20,6 +20,7 @@
 <meta name="twitter:description" content="Animated pixel-art widgets for your GitHub profile or project README, redrawn every night from your real activity.">
 <meta name="twitter:image" content="https://lgtm.byelior.dev/og.png">
 <meta name="theme-color" content="#08090b">
+<script defer src="https://stats.byelior.dev/p.js" data-website-id="92859974-7ab3-4bab-a617-32f4d2697562"></script>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -58,7 +59,7 @@
         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/></svg>
         <span class="star-label">Star</span><span class="star-count" id="star-count" hidden></span>
       </a>
-      <button class="pill-btn small" type="button" data-open aria-haspopup="dialog">Add to your README</button>
+      <button class="pill-btn small" type="button" data-open data-umami-event="ouvrir-configurateur" aria-haspopup="dialog">Add to your README</button>
     </nav>
   </div>
 </header>
@@ -70,7 +71,7 @@
       <h1>Looks good to ReadMe.</h1>
       <p class="lead">Pixel-art GIFs of your GitHub activity for your profile or project README, redrawn every night.</p>
       <div class="actions">
-        <button class="pill-btn" type="button" data-open aria-haspopup="dialog">Add to your README</button>
+        <button class="pill-btn" type="button" data-open data-umami-event="ouvrir-configurateur" aria-haspopup="dialog">Add to your README</button>
         <div class="used" id="used" hidden>
           <span>Used by</span>
           <ul class="used-list" id="used-list"></ul>
@@ -116,7 +117,7 @@
       <div>
         <h2 id="closing-title">Add them to your README</h2>
         <p>Pick your widgets, and the setup walks you through the two files to add on GitHub. It takes about three minutes.</p>
-        <button class="pill-btn" type="button" data-open aria-haspopup="dialog">Get started</button>
+        <button class="pill-btn" type="button" data-open data-umami-event="ouvrir-configurateur" aria-haspopup="dialog">Get started</button>
       </div>
       <div class="closing-mark" data-build-mark><svg class="mark" viewBox="0 0 16 16" aria-hidden="true" shape-rendering="crispEdges"><path d="M1 0h10v4H1zM1 4h14v2H1zM1 6h9v1H1zM12 6h3v2h-3zM1 7h8v1H1zM1 8h7v1H1zM11 8h4v1h-4zM1 9h2v2H1zM5 9h2v1H5zM10 9h5v1h-5zM9 10h6v1H9zM1 11h3v1H1zM8 11h7v1H8zM1 12h4v1H1zM7 12h8v1H7zM1 13h14v3H1z"/><path class="mark-flap" d="M11 1h1v3h-1zM12 2h1v2h-1zM13 3h1v1h-1z"/></svg></div>
     </div>
@@ -226,7 +227,7 @@
           <li>Click <b>Generate token</b>, then copy it. GitHub shows it only once.</li>
         </ol>
         <div class="tuto-actions">
-          <a class="pill-btn" id="token-link" href="https://github.com/settings/personal-access-tokens/new?name=LGTM.md&amp;description=Read-only+token+for+LGTM.md&amp;expires_in=none&amp;contents=read&amp;pull_requests=read" target="_blank" rel="noopener">Open the token form ↗</a>
+          <a class="pill-btn" id="token-link" data-umami-event="formulaire-jeton" href="https://github.com/settings/personal-access-tokens/new?name=LGTM.md&amp;description=Read-only+token+for+LGTM.md&amp;expires_in=none&amp;contents=read&amp;pull_requests=read" target="_blank" rel="noopener">Open the token form ↗</a>
           <details class="more more-quiet">
             <summary>What the token can read</summary>
             <div class="more-body">
@@ -278,14 +279,14 @@
           <li>Click <b>Add secret</b>.</li>
         </ol>
         <div class="tuto-actions">
-          <a class="pill-btn" id="secret-link" href="#" target="_blank" rel="noopener">Open your repository secrets ↗</a>
+          <a class="pill-btn" id="secret-link" data-umami-event="page-secrets" href="#" target="_blank" rel="noopener">Open your repository secrets ↗</a>
         </div>
       </section>
 
       <section class="pane" data-pane="workflow" aria-labelledby="pane-workflow" hidden>
         <h3 class="pane-title" id="pane-workflow" tabindex="-1">Add the workflow to your repository</h3>
         <p class="pane-help" id="commit-help"></p>
-        <a class="pill-btn wide" id="create" aria-disabled="true" rel="noopener">Create the workflow on GitHub ↗</a>
+        <a class="pill-btn wide" id="create" data-umami-event="creer-workflow" aria-disabled="true" rel="noopener">Create the workflow on GitHub ↗</a>
         <p class="hint" id="create-hint"></p>
         <p class="then">Click <b>Commit changes</b> on GitHub, then come back.</p>
         <details class="more">
@@ -293,7 +294,7 @@
           <div class="gh gh-file">
             <div class="gh-bar">
               <span class="gh-name">lgtm-md.yml</span>
-              <button class="copy pill-btn small ghost" data-copy="yaml" type="button">Copy</button>
+              <button class="copy pill-btn small ghost" data-copy="yaml" data-umami-event="copier-yaml" type="button">Copy</button>
             </div>
             <pre class="gh-code" id="yaml"></pre>
           </div>
@@ -308,7 +309,7 @@
             <button type="button" data-view="preview" aria-pressed="true">Preview</button>
             <button type="button" data-view="code" aria-pressed="false">Code</button>
           </div>
-          <button class="copy pill-btn" data-copy="html" type="button">Copy README</button>
+          <button class="copy pill-btn" data-copy="html" data-umami-event="copier-readme" type="button">Copy README</button>
         </div>
         <div class="gh fit-box gh-theme" id="readme-box" data-theme="dark" data-view="preview">
           <div class="md-head">

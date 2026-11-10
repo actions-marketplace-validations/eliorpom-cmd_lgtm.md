@@ -814,6 +814,8 @@ function goTo(key, focus = true) {
   if (stepIndex(key) === -1 || stepIndex(key) > lastReachable()) return;
   const back = stepIndex(key) < stepIndex(state.step);
   state.step = key;
+  // Umami: which steps people reach, to see where the setup loses them.
+  window.umami?.track("etape", { etape: key });
   for (const d of $$("#setup .more[open]")) d.open = false;
   update();
   $("#cfg-body").scrollTop = 0;
