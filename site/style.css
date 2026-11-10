@@ -112,6 +112,7 @@ h3 { font-size: 22px; line-height: 1.25; letter-spacing: -0.02em; }
 .field input:hover, .field input:focus { border-color: var(--faint); outline: none; }
 .field input[aria-invalid="true"] { border-color: var(--red); }
 .field-error { margin-top: var(--s-8); font-size: 14px; color: var(--red); }
+.field-warn { margin-top: var(--s-8); font-size: 14px; color: #d29922; }
 .check { display: flex; align-items: center; gap: var(--s-8); margin: var(--s-16) 0 var(--s-8); font-size: 14px; }
 .check .icon { color: var(--faint); }
 .token-steps a { color: var(--text); text-decoration-color: var(--faint); text-underline-offset: 3px; }

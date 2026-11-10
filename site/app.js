@@ -205,20 +205,21 @@ function targetInfo() {
   return { ok: false, owner: "owner", repo: "repo", error: "Write the repository as owner/name, for example octocat/hello-world." };
 }
 
-// Does the profile repository exist? Every link of steps 3 to 6 points into it,
-// so a missing one sends the visitor to a GitHub 404. A profile repository is public,
-// so the anonymous API answers. Only "missing" blocks: a network error or a rate limit lets the visitor through.
+// Does the repository exist? Every link of the next steps points into it,
+// so a missing one sends the visitor to a GitHub 404. A profile repository is public, so the
+// anonymous API answers and "missing" blocks. A project may be private, which the anonymous API
+// also answers with a 404: there it is only a warning. A network error or a rate limit never blocks.
 const repoCheck = new Map(); // "owner/repo" (lowercase) -> "checking" | "ok" | "missing" | "unknown"
 let repoTimer = 0;
 
 function repoStatus(t) {
-  if (state.mode !== "profile" || !t.ok) return "ok";
+  if (!t.ok) return "ok";
   return repoCheck.get(`${t.owner}/${t.repo}`.toLowerCase()) || "checking";
 }
 
 function checkRepo(force = false) {
   const t = targetInfo();
-  if (state.mode !== "profile" || !t.ok) return;
+  if (!t.ok) return;
   const key = `${t.owner}/${t.repo}`.toLowerCase();
   const known = repoCheck.get(key);
   if (!force && known) return;
@@ -613,7 +614,7 @@ function stepBlock(key) {
   const project = state.mode === "project";
   if (t.error) return project ? "Fix the repository name to continue." : "Fix your login to continue.";
   if (!t.ok) return project ? "Type the repository to continue." : "Type your login to continue.";
-  const repo = repoStatus(t);
+  const repo = project ? "ok" : repoStatus(t);
   if (repo === "missing") return "Create your profile repository on GitHub, then come back here.";
   if (repo === "checking") return "Checking your profile repository…";
   if (duelPending()) return rivalError() ? "Fix your friend’s login to continue." : "Type a friend’s login for the duel, or go back and remove it.";
@@ -706,6 +707,9 @@ function update() {
     ? `No repository named ${t.owner}/${t.repo} yet.`
     : repo === "ok" && t.ok && !project ? `Found ${t.owner}/${t.repo}` : "Public, and named exactly like your login";
   $("#repo-create").classList.toggle("is-primary", missing);
+  const warn = $("#target-warn");
+  warn.hidden = !(project && missing);
+  warn.textContent = project && missing ? `Can’t find ${t.owner}/${t.repo}. Check the name, or carry on if the repository is private.` : "";
   $("#repo-create").href = t.ok && !project
     ? `https://github.com/new?name=${encodeURIComponent(t.owner)}&visibility=public`
     : "https://github.com/new?visibility=public";
